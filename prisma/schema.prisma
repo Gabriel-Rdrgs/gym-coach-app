@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Exercise {
+  id               Int                   @id @default(autoincrement())
+  name             String                @unique
+  muscleGroup      String
+  type             String
+  notes            String?
+  imageUrl         String? // URL para GIF ou imagem do exercício
+  videoUrl         String? // URL para vídeo tutorial (opcional)
+  equipment        String? // Equipamento necessário (barra, halteres, máquina, etc)
+  difficulty       String? // Nível de dificuldade (iniciante, intermediário, avançado)
+  workoutExercises WorkoutExercise[]
+  alternatives     ExerciseAlternative[] @relation("AlternativeExercises")
+  mainExercise     ExerciseAlternative[] @relation("MainExercise")
+  personalRecords  PersonalRecord[]
+}
+
+model Workout {
+  id        Int               @id @default(autoincrement())
+  date      DateTime          @default(now())
+  template  String
+  notes     String?
+  exercises WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id         Int     @id @default(autoincrement())
+  workoutId  Int
+  exerciseId Int
+  order      Int
+  notes      String?
+
+  workout  Workout  @relation(fields: [workoutId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  sets     Set[]
+}
+
+model Set {
+  id                Int    @id @default(autoincrement())
+  workoutExerciseId Int
+  setNumber         Int
+  weight            Float
+  reps              Int
+  rir               Float?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
+}
+
+model Metric {
+  id     Int      @id @default(autoincrement())
+  date   DateTime @default(now())
+  weight Float?
+  waist  Float?
+  sleep  Float?
+  energy Int?
+  stress Int?
+  notes  String?
+}
+
+// Tabela para relacionar exercícios alternativos/similares
+model ExerciseAlternative {
+  id             Int   @id @default(autoincrement())
+  mainExerciseId Int
+  alternativeId  Int
+  similarity     Float @default(1.0) // Score de similaridade (0-1)
+
+  mainExercise Exercise @relation("MainExercise", fields: [mainExerciseId], references: [id], onDelete: Cascade)
+  alternative  Exercise @relation("AlternativeExercises", fields: [alternativeId], references: [id], onDelete: Cascade)
+
+  @@unique([mainExerciseId, alternativeId])
+  @@index([mainExerciseId])
+}
+
+// Tabela para armazenar PRs (Personal Records)
+model PersonalRecord {
+  id         Int      @id @default(autoincrement())
+  exerciseId Int
+  weight     Float
+  reps       Int
+  date       DateTime @default(now())
+  workoutId  Int? // Referência ao treino onde o PR foi alcançado
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@index([exerciseId])
+  @@index([date])
+}
