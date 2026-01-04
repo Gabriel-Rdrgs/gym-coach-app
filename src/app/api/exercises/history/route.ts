@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Ordenar por data do treino manualmente
-    workoutExercises.sort((a, b) => {
+    workoutExercises.sort((a: typeof workoutExercises[0], b: typeof workoutExercises[0]) => {
       return b.workout.date.getTime() - a.workout.date.getTime();
     });
 
