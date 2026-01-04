@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Otimizações para produção
-  output: 'standalone', // Para Docker
+  // output: 'standalone' removido - Vercel não precisa, apenas para Docker
   poweredByHeader: false, // Remove header X-Powered-By
   compress: true, // Habilita compressão gzip
   
