@@ -61,13 +61,6 @@ interface ProgressData {
     energy: number | null;
     stress: number | null;
   }>;
-  workoutVolumes: Array<{
-    date: string;
-    volume: number;
-    template: string;
-    exerciseCount: number;
-    totalSets: number;
-  }>;
   validSets: Array<{
     date: string;
     totalValidSets: number;
@@ -538,7 +531,7 @@ export default function ProgressPage() {
     .slice(0, 5);
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-6 md:px-12 lg:px-16">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="mb-20 text-center">
@@ -651,7 +644,7 @@ export default function ProgressPage() {
         </div>
 
         {/* Estatísticas Gerais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10 mb-24">
           <div className="card-neon text-center" style={{ padding: '32px' }}>
             <div className="text-3xl mb-3">🏋️</div>
             <div
@@ -798,7 +791,7 @@ export default function ProgressPage() {
 
             if (metricCards.length > 0) {
               return (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-4 gap-y-8 mb-16">
                   {metricCards.map((card, index) => (
                     <div key={index} className="card-neon text-center" style={{ padding: '20px' }}>
                       <div className="text-2xl mb-2">{card.icon}</div>
@@ -1054,7 +1047,7 @@ export default function ProgressPage() {
               <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
                 Comparação: últimos 30 dias vs 30 dias anteriores
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
                 {topProgressingGroups.map((item, index) => (
                   <div
                     key={index}
@@ -1110,7 +1103,7 @@ export default function ProgressPage() {
                 >
                   📊 Estatísticas de Frequência
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-10 mb-12">
                   <div className="text-center">
                     <div className="text-2xl font-bold mb-2" style={{ color: 'var(--accent-primary)' }}>
                       {avgWeeklyFrequency.toFixed(1)}
@@ -1191,7 +1184,7 @@ export default function ProgressPage() {
           </h2>
 
           {/* Gráficos em Grid */}
-          <div className="grid lg:grid-cols-2 gap-8 mb-16">
+          <div className="grid lg:grid-cols-2 gap-x-8 gap-y-12 mb-20">
             {/* Gráfico de Métricas Combinadas */}
             {metricsData.length > 0 && (
               <div className="card-neon" style={{ padding: '40px' }}>
@@ -1476,7 +1469,7 @@ export default function ProgressPage() {
               >
                 🏆 Seus Melhores Personal Records
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8 mb-12">
                 {latestPRs.map((pr, index) => (
                   <div
                     key={index}

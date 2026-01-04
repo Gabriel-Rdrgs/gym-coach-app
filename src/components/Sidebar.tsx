@@ -43,6 +43,11 @@ const navItems: NavItem[] = [
     icon: '🏆',
   },
   {
+    name: 'Programas',
+    href: '/programs',
+    icon: '📅',
+  },
+  {
     name: 'Dieta',
     href: '/diet',
     icon: '🥗',

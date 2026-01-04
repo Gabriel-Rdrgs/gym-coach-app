@@ -7,6 +7,7 @@ import WorkoutCard from '@/components/WorkoutCard';
 import { useToast } from '@/components/Toast';
 import { estimateWorkoutTime, formatWorkoutTime } from '@/lib/workout-time-utils';
 import { getExerciseType } from '@/lib/exercise-types-map';
+import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 
 interface SetData {
   setNumber: number;
@@ -187,7 +188,7 @@ export default function WorkoutsPage() {
   if (showForm) {
     return (
       <div 
-        className="flex justify-center min-h-screen py-12 px-8"
+        className="flex justify-center min-h-screen py-12"
         onScroll={(e) => {
           // Prevenir scroll acidental
           e.stopPropagation();
@@ -205,15 +206,26 @@ export default function WorkoutsPage() {
               </p>
               {currentWorkout.length > 0 && (() => {
                 const timeEstimate = estimateWorkoutTime(currentWorkout);
-                const totalVolume = currentWorkout.reduce((total, exercise) => {
-                  return total + exercise.sets.reduce((sum, set) => {
-                    return sum + (set.weight * set.reps);
-                  }, 0);
-                }, 0);
                 const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
-                const validSets = currentWorkout.reduce((sum, exercise) => {
-                  return sum + exercise.sets.filter(set => set.weight > 0 && set.reps > 0).length;
-                }, 0);
+                
+                // Calcular séries válidas usando a função utilitária
+                const workoutFormatted = {
+                  date: new Date(),
+                  exercises: currentWorkout.map((ex) => ({
+                    exercise: {
+                      muscleGroup: ex.muscleGroup,
+                      name: ex.name,
+                      type: ex.type || 'isolation',
+                    },
+                    sets: ex.sets.map((set) => ({
+                      rir: set.rir ?? null,
+                      weight: set.weight,
+                      reps: set.reps,
+                    })),
+                  })),
+                };
+                const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
+                const totalValidSets = validSetsResult.totalValidSets;
 
                 return (
                   <div className="flex items-center gap-3 flex-wrap">
@@ -227,21 +239,21 @@ export default function WorkoutsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
-                      background: 'rgba(167, 139, 250, 0.1)', 
-                      borderColor: 'var(--accent-secondary)' 
-                    }}>
-                      <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>📊</span>
-                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
-                        {totalVolume.toFixed(1)} kg
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
                       background: 'rgba(16, 185, 129, 0.1)', 
                       borderColor: 'var(--accent-success)' 
                     }}>
                       <span className="text-sm" style={{ color: 'var(--accent-success)' }}>✓</span>
                       <span className="text-sm font-semibold" style={{ color: 'var(--accent-success)' }}>
-                        {validSets}/{totalSets} séries
+                        {totalValidSets.toFixed(1)} séries válidas
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
+                      background: 'rgba(167, 139, 250, 0.1)', 
+                      borderColor: 'var(--accent-secondary)' 
+                    }}>
+                      <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>📊</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
+                        {totalSets} séries totais
                       </span>
                     </div>
                   </div>
@@ -297,16 +309,27 @@ export default function WorkoutsPage() {
         {/* Card de Resumo do Treino */}
         {currentWorkout.length > 0 && (() => {
           const timeEstimate = estimateWorkoutTime(currentWorkout);
-          const totalVolume = currentWorkout.reduce((total, exercise) => {
-            return total + exercise.sets.reduce((sum, set) => {
-              return sum + (set.weight * set.reps);
-            }, 0);
-          }, 0);
           const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
-          const validSets = currentWorkout.reduce((sum, exercise) => {
-            return sum + exercise.sets.filter(set => set.weight > 0 && set.reps > 0).length;
-          }, 0);
           const totalExercises = currentWorkout.length;
+          
+          // Calcular séries válidas usando a função utilitária
+          const workoutFormatted = {
+            date: new Date(),
+            exercises: currentWorkout.map((ex) => ({
+              exercise: {
+                muscleGroup: ex.muscleGroup,
+                name: ex.name,
+                type: ex.type || 'isolation',
+              },
+              sets: ex.sets.map((set) => ({
+                rir: set.rir ?? null,
+                weight: set.weight,
+                reps: set.reps,
+              })),
+            })),
+          };
+          const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
+          const totalValidSets = validSetsResult.totalValidSets;
 
           return (
             <div className="card-neon mb-8" style={{ 
@@ -317,7 +340,7 @@ export default function WorkoutsPage() {
               <h3 className="text-xl font-bold mb-6 text-glow" style={{ color: 'var(--accent-primary)' }}>
                 📊 Resumo do Treino
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
                 <div>
                   <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
                     Tempo Estimado
@@ -328,18 +351,18 @@ export default function WorkoutsPage() {
                 </div>
                 <div>
                   <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Volume Total
+                    Séries Válidas
                   </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-secondary)' }}>
-                    {totalVolume.toFixed(1)} kg
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-success)' }}>
+                    {totalValidSets.toFixed(1)}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Séries Válidas
+                    Séries Totais
                   </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-success)' }}>
-                    {validSets}/{totalSets}
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-secondary)' }}>
+                    {totalSets}
                   </div>
                 </div>
                 <div>
@@ -418,7 +441,7 @@ export default function WorkoutsPage() {
             {/* Espaçamento vertical */}
             <div style={{ height: '24px' }}></div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
               {program.templates.map((template) => (
                 <button
                   key={template}
@@ -464,7 +487,7 @@ export default function WorkoutsPage() {
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
         
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12">
             {Object.entries(workoutPrograms).map(([key, program]) => (
               <button
                 key={key}

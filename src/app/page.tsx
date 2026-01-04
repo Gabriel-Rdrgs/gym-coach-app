@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
+import TodayWorkout from '@/components/TodayWorkout';
 
 // Forçar renderização dinâmica (não pré-renderizar durante build)
 export const dynamic = 'force-dynamic';
@@ -217,8 +218,11 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
-      <div className="max-w-7xl mx-auto px-8 py-12 lg:ml-0">
+      <div className="max-w-7xl mx-auto py-12">
         {/* Page Title */}
+        {/* Treino do Dia */}
+        <TodayWorkout />
+
         <div className="text-center mb-16">
           <h1 
             className="text-5xl font-bold mb-4 text-glow"
@@ -238,8 +242,11 @@ export default async function Home() {
           </p>
         </div>
 
+        {/* Treino do Dia */}
+        <TodayWorkout />
+
         {/* Stats Cards - Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10 mb-12 md:mb-16 lg:mb-20">
           <div className="card-neon text-center" style={{ padding: '40px 32px' }}>
             <div className="text-5xl mb-6">🏋️</div>
             <div className="text-4xl font-bold mb-3 text-glow" style={{ color: 'var(--accent-primary)' }}>
@@ -294,7 +301,7 @@ export default async function Home() {
         </div>
 
         {/* Estatísticas Avançadas - Segunda Linha */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10 section-spacing mb-12 md:mb-16 lg:mb-20">
           {/* Treinos Esta Semana */}
           <div className="card-neon" style={{ padding: '32px' }}>
             <div className="flex items-center justify-between mb-4">
@@ -411,8 +418,8 @@ export default async function Home() {
         {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
 
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-14 mb-20">
+          {/* Main Content Grid */}
+          <div className="grid lg:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12 mb-20">
           {/* Quick Actions - Takes 2 columns */}
           <div className="lg:col-span-2">
             <div className="card-neon" style={{ padding: '48px' }}>
@@ -529,7 +536,7 @@ export default async function Home() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                   {stats.latestMetric.energy !== null && (
                     <div>
                       <div className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>

@@ -180,7 +180,7 @@ export default function PRsPage() {
   ).map((ex) => ex);
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="mb-16 text-center">
@@ -200,7 +200,7 @@ export default function PRsPage() {
         </div>
 
         {/* Estatísticas Gerais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10 mb-16">
           <div className="card-neon text-center" style={{ padding: '32px' }}>
             <div className="text-3xl mb-3">🏆</div>
             <div
@@ -298,7 +298,7 @@ export default function PRsPage() {
         )}
 
         {/* Gráficos */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid lg:grid-cols-2 gap-x-8 gap-y-12 mb-16">
           {/* Gráfico de Evolução de PRs por Exercício */}
           {exercisesWithMultiplePRs.length > 0 && prsChartData.length > 0 ? (
             <div className="card-neon" style={{ padding: '40px' }}>
@@ -578,7 +578,7 @@ export default function PRsPage() {
             >
               Melhores PRs por Exercício
             </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
               {data.bestPRs
                 .sort((a, b) => b.weight - a.weight)
                 .map((pr) => (

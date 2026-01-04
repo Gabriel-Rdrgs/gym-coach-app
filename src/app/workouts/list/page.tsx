@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 
 interface Workout {
   id: number;
@@ -14,10 +15,12 @@ interface Workout {
     exercise: {
       name: string;
       muscleGroup: string;
+      type?: string;
     };
     sets: Array<{
       weight: number;
       reps: number;
+      rir?: number | null;
     }>;
   }>;
 }
@@ -52,13 +55,24 @@ const formatDateShort = (dateString: string) => {
   }).format(date);
 };
 
-const calculateTotalVolume = (workout: Workout) => {
-  return workout.exercises.reduce((total, ex) => {
-    const exerciseVolume = ex.sets.reduce((sum, set) => {
-      return sum + set.weight * set.reps;
-    }, 0);
-    return total + exerciseVolume;
-  }, 0);
+const calculateValidSets = (workout: Workout) => {
+  const workoutFormatted = {
+    date: new Date(workout.date),
+    exercises: workout.exercises.map((ex) => ({
+      exercise: {
+        muscleGroup: ex.exercise.muscleGroup,
+        name: ex.exercise.name,
+        type: ex.exercise.type || 'isolation',
+      },
+      sets: ex.sets.map((set) => ({
+        rir: set.rir ?? null,
+        weight: set.weight,
+        reps: set.reps,
+      })),
+    })),
+  };
+  const result = calculateValidSetsForWorkout(workoutFormatted);
+  return result.totalValidSets;
 };
 
 const groupWorkoutsByDate = (workouts: Workout[]) => {
@@ -179,7 +193,7 @@ export default function WorkoutsListPage() {
   }
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="mb-12">
@@ -208,7 +222,7 @@ export default function WorkoutsListPage() {
 
           {/* Filtros */}
           <div className="card-neon p-6 mb-8">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-3 gap-x-4 gap-y-6 md:gap-y-8">
               {/* Busca */}
               <input
                 type="text"
@@ -281,9 +295,9 @@ export default function WorkoutsListPage() {
                 </div>
 
                 {/* Cards de Treinos */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-6 md:gap-y-8">
                   {dayWorkouts.map((workout) => {
-                    const totalVolume = calculateTotalVolume(workout);
+                    const totalValidSets = calculateValidSets(workout);
                     const totalSets = workout.exercises.reduce(
                       (sum, ex) => sum + ex.sets.length,
                       0
@@ -322,12 +336,12 @@ export default function WorkoutsListPage() {
 
                             <div className="space-y-2 mb-4">
                               <div className="flex justify-between text-sm">
-                                <span style={{ color: 'var(--text-muted)' }}>Volume:</span>
+                                <span style={{ color: 'var(--text-muted)' }}>Séries Válidas:</span>
                                 <span
                                   className="font-bold"
-                                  style={{ color: 'var(--accent-primary)' }}
+                                  style={{ color: 'var(--accent-success)' }}
                                 >
-                                  {totalVolume.toFixed(1)} kg
+                                  {totalValidSets.toFixed(1)}
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm">
@@ -337,7 +351,7 @@ export default function WorkoutsListPage() {
                                 </span>
                               </div>
                               <div className="flex justify-between text-sm">
-                                <span style={{ color: 'var(--text-muted)' }}>Séries:</span>
+                                <span style={{ color: 'var(--text-muted)' }}>Séries Totais:</span>
                                 <span style={{ color: 'var(--text-primary)' }}>{totalSets}</span>
                               </div>
                             </div>

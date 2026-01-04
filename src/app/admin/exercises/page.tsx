@@ -86,7 +86,7 @@ export default function AdminExercisesPage() {
   }
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-6xl">
         <div className="mb-12 text-center">
           <h1 
@@ -116,7 +116,7 @@ export default function AdminExercisesPage() {
 
         {/* Filtros */}
         <div className="card-neon mb-8" style={{ padding: '24px' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
             <input
               type="text"
               placeholder="Buscar exercício..."
@@ -280,7 +280,7 @@ export default function AdminExercisesPage() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-8">
                       <div>
                         <label className="block mb-2 text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
                           Equipamento

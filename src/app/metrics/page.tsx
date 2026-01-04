@@ -115,7 +115,7 @@ export default function MetricsPage() {
   }
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-4xl">
         <div className="mb-16 text-center">
           <h1 
@@ -158,7 +158,7 @@ export default function MetricsPage() {
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-x-4 gap-y-8">
                 <div>
                   <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
                     Peso (kg)
@@ -330,7 +330,7 @@ export default function MetricsPage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+                <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-10 mb-8">
                   {metric.weight !== null && metric.weight !== undefined && (
                     <div>
                       <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Peso</div>

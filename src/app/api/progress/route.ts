@@ -25,27 +25,6 @@ export async function GET() {
       orderBy: { date: 'asc' },
     }).catch(() => []);
 
-    // Calcular volume total por treino (tradicional - peso × reps)
-    const workoutVolumes = workouts.map((workout) => {
-      const totalVolume = workout.exercises.reduce((sum, ex) => {
-        return (
-          sum +
-          ex.sets.reduce((setSum, set) => setSum + set.weight * set.reps, 0)
-        );
-      }, 0);
-
-      return {
-        date: workout.date.toISOString().split('T')[0],
-        volume: totalVolume,
-        template: workout.template,
-        exerciseCount: workout.exercises.length,
-        totalSets: workout.exercises.reduce(
-          (sum, ex) => sum + ex.sets.length,
-          0
-        ),
-      };
-    });
-
     // Calcular séries válidas baseadas em RIR
     const validSetsData = calculateValidSetsForWorkouts(workouts);
     
@@ -108,7 +87,6 @@ export async function GET() {
 
     return NextResponse.json({
       metrics: metricsData,
-      workoutVolumes,
       validSets: validSetsWithTemplate,
       validSetsByMuscleGroup,
       workoutFrequency,
@@ -121,7 +99,6 @@ export async function GET() {
     // Retornar dados vazios ao invés de erro 500
     return NextResponse.json({
       metrics: [],
-      workoutVolumes: [],
       validSets: [],
       validSetsByMuscleGroup: [],
       workoutFrequency: [],

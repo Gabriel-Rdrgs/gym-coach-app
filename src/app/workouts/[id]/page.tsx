@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 
 // Forçar renderização dinâmica (não pré-renderizar durante build)
 export const dynamic = 'force-dynamic';
@@ -46,20 +47,28 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
     }).format(date);
   };
 
-  const calculateTotalVolume = () => {
-    return workout.exercises.reduce((total, ex) => {
-      const exerciseVolume = ex.sets.reduce((sum, set) => {
-        return sum + set.weight * set.reps;
-      }, 0);
-      return total + exerciseVolume;
-    }, 0);
+  // Calcular séries válidas usando a função utilitária
+  const workoutFormatted = {
+    date: workout.date,
+    exercises: workout.exercises.map((ex) => ({
+      exercise: {
+        muscleGroup: ex.exercise?.muscleGroup || '',
+        name: ex.exercise?.name || '',
+        type: ex.exercise?.type || 'isolation',
+      },
+      sets: ex.sets.map((set) => ({
+        rir: set.rir,
+        weight: set.weight,
+        reps: set.reps,
+      })),
+    })),
   };
-
-  const totalVolume = calculateTotalVolume();
+  const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
+  const totalValidSets = validSetsResult.totalValidSets;
   const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-4xl">
         <div className="mb-16 text-center">
           <h1 
@@ -100,9 +109,9 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Volume Total</div>
+            <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Séries Válidas</div>
             <div className="text-2xl font-bold text-glow" style={{ color: 'var(--accent-primary)' }}>
-              {totalVolume.toFixed(1)} kg
+              {totalValidSets.toFixed(1)}
             </div>
           </div>
         </div>
@@ -117,7 +126,7 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
         {/* Espaçamento vertical */}
         <div style={{ height: '24px' }}></div>
 
-        <div className="grid grid-cols-3 gap-4 text-center mb-6 pt-6" style={{ borderTop: '2px solid var(--accent-primary)' }}>
+        <div className="grid grid-cols-3 gap-x-4 gap-y-6 text-center mb-6 pt-6" style={{ borderTop: '2px solid var(--accent-primary)' }}>
           <div>
             <div className="text-2xl font-bold text-glow" style={{ color: 'var(--accent-primary)' }}>
               {workout.exercises.length}
@@ -144,10 +153,15 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
         {workout.exercises.map((workoutExercise, index) => {
           const exercise = workoutExercise.exercise;
           const sets = workoutExercise.sets;
-          const exerciseVolume = sets.reduce(
-            (sum, set) => sum + set.weight * set.reps,
-            0
-          );
+          
+          // Calcular séries válidas para este exercício
+          const exerciseValidSets = sets.reduce((sum, set) => {
+            const rir = set.rir;
+            if (rir === null || rir === undefined) return sum + 1.0;
+            if (rir > 3) return sum + 0.0; // Aquecimento
+            if (rir >= 2 && rir <= 3) return sum + 0.5; // Ajuste
+            return sum + 1.0; // Válida
+          }, 0);
 
           return (
             <div
@@ -165,9 +179,9 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Volume</div>
-                  <div className="text-lg font-bold" style={{ color: 'var(--accent-secondary)' }}>
-                    {exerciseVolume.toFixed(1)} kg
+                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Séries Válidas</div>
+                  <div className="text-lg font-bold" style={{ color: 'var(--accent-success)' }}>
+                    {exerciseValidSets.toFixed(1)}
                   </div>
                 </div>
               </div>
@@ -187,29 +201,45 @@ export default async function WorkoutPage({ params }: WorkoutPageProps) {
                       <th className="text-right">Peso (kg)</th>
                       <th className="text-right">Reps</th>
                       <th className="text-right">RIR</th>
-                      <th className="text-right">Volume</th>
+                      <th className="text-right">Válida</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sets.map((set) => (
-                      <tr key={set.id}>
-                        <td className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                          {set.setNumber}
-                        </td>
-                        <td className="text-right" style={{ color: 'var(--text-primary)' }}>
-                          {set.weight.toFixed(1)}
-                        </td>
-                        <td className="text-right" style={{ color: 'var(--text-primary)' }}>{set.reps}</td>
-                        <td className="text-right" style={{ color: 'var(--text-primary)' }}>
-                          {set.rir !== null && set.rir !== undefined
-                            ? set.rir.toFixed(1)
-                            : '-'}
-                        </td>
-                        <td className="text-right font-medium" style={{ color: 'var(--accent-primary)' }}>
-                          {(set.weight * set.reps).toFixed(1)} kg
-                        </td>
-                      </tr>
-                    ))}
+                    {sets.map((set) => {
+                      const rir = set.rir;
+                      let validValue = 1.0;
+                      let validLabel = '✓';
+                      if (rir !== null && rir !== undefined) {
+                        if (rir > 3) {
+                          validValue = 0.0;
+                          validLabel = '-';
+                        } else if (rir >= 2 && rir <= 3) {
+                          validValue = 0.5;
+                          validLabel = '0.5';
+                        }
+                      }
+                      return (
+                        <tr key={set.id}>
+                          <td className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                            {set.setNumber}
+                          </td>
+                          <td className="text-right" style={{ color: 'var(--text-primary)' }}>
+                            {set.weight.toFixed(1)}
+                          </td>
+                          <td className="text-right" style={{ color: 'var(--text-primary)' }}>{set.reps}</td>
+                          <td className="text-right" style={{ color: 'var(--text-primary)' }}>
+                            {rir !== null && rir !== undefined
+                              ? rir.toFixed(1)
+                              : '-'}
+                          </td>
+                          <td className="text-right font-medium" style={{ 
+                            color: validValue > 0 ? 'var(--accent-success)' : 'var(--text-muted)' 
+                          }}>
+                            {validLabel}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -58,7 +58,7 @@ export default function ExercisesPage() {
   const uniqueDifficulties = Array.from(new Set(exercises.map((ex) => ex.difficulty).filter(Boolean))).sort();
 
   return (
-    <div className="flex justify-center min-h-screen py-12 px-8">
+    <div className="flex justify-center min-h-screen py-12">
       <div className="w-full max-w-4xl">
         <div className="mb-16 text-center">
           <h1 
@@ -92,7 +92,7 @@ export default function ExercisesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-neon w-full"
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8">
               <select
                 value={filterMuscleGroup}
                 onChange={(e) => setFilterMuscleGroup(e.target.value)}
@@ -178,7 +178,7 @@ export default function ExercisesPage() {
                 {filteredExercises.length} {filteredExercises.length === 1 ? 'exercício encontrado' : 'exercícios encontrados'}
               </p>
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
             {filteredExercises.map((exercise) => {
               const isGif = exercise.imageUrl?.toLowerCase().endsWith('.gif') || 
                            exercise.imageUrl?.includes('giphy') ||

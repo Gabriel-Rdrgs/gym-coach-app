@@ -145,8 +145,8 @@ export default function ExerciseSwapModal({
         <div className="p-6 border-b" style={{ borderColor: 'rgba(0, 217, 255, 0.2)' }}>
           <div className="flex items-center justify-between mb-4">
             <p className="text-base" style={{ color: 'var(--text-muted)' }}>
-              Exercício atual: <span className="font-semibold" style={{ color: 'var(--accent-primary)' }}>{currentExercise.name}</span>
-            </p>
+            Exercício atual: <span className="font-semibold" style={{ color: 'var(--accent-primary)' }}>{currentExercise.name}</span>
+          </p>
             {!loading && filteredAlternatives.length > 0 && (
               <p className="text-sm" style={{ color: 'var(--accent-secondary)' }}>
                 {filteredAlternatives.length} {filteredAlternatives.length === 1 ? 'alternativa' : 'alternativas'}
@@ -154,11 +154,11 @@ export default function ExerciseSwapModal({
             )}
           </div>
           <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Buscar exercício alternativo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          <input
+            type="text"
+            placeholder="Buscar exercício alternativo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
               className="input-neon flex-1"
               disabled={isRolling}
             />
@@ -199,36 +199,36 @@ export default function ExerciseSwapModal({
           )}
           
           <div className="p-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="text-4xl mb-4">⏳</div>
-              <p style={{ color: 'var(--text-muted)' }}>Carregando alternativas...</p>
-            </div>
-          ) : filteredAlternatives.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-4xl mb-4">🔍</div>
-              <p style={{ color: 'var(--text-muted)' }}>
-                Nenhum exercício alternativo encontrado
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">⏳</div>
+            <p style={{ color: 'var(--text-muted)' }}>Carregando alternativas...</p>
+          </div>
+        ) : filteredAlternatives.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🔍</div>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Nenhum exercício alternativo encontrado
+            </p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
             {filteredAlternatives.map((exercise, index) => {
               const isHighlighted = highlightedIndex === index;
               const isCurrent = !isRolling && highlightedIndex === index;
               
               return (
-                <button
-                  key={exercise.id}
-                  onClick={() => {
+              <button
+                key={exercise.id}
+                onClick={() => {
                     if (!isRolling) {
-                      onSelect(exercise);
-                      onClose();
+                  onSelect(exercise);
+                  onClose();
                     }
-                  }}
+                }}
                   disabled={isRolling}
                   className="card-neon text-left p-4 transition-all relative"
-                  style={{
+                style={{
                     border: isHighlighted 
                       ? '3px solid var(--accent-secondary)' 
                       : '1px solid var(--accent-primary)',
@@ -243,8 +243,8 @@ export default function ExerciseSwapModal({
                     opacity: isRolling && !isHighlighted ? 0.5 : 1,
                     pointerEvents: isRolling ? 'none' : 'auto',
                     animation: isCurrent ? 'selected-pulse 0.5s ease-out' : 'none',
-                  }}
-                >
+                }}
+              >
                   {isHighlighted && (
                     <div 
                       className="absolute top-2 right-2 text-2xl animate-bounce z-10"
@@ -253,32 +253,32 @@ export default function ExerciseSwapModal({
                       ✨
                     </div>
                   )}
-                  <div className="flex items-start gap-4">
-                    {exercise.imageUrl && (
-                      <img
-                        src={exercise.imageUrl}
-                        alt={exercise.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h3
-                        className="font-semibold text-lg mb-1"
-                        style={{ color: 'var(--accent-primary)' }}
-                      >
-                        {exercise.name}
-                      </h3>
-                      <p className="text-sm capitalize mb-2" style={{ color: 'var(--text-muted)' }}>
-                        {exercise.muscleGroup.replace('_', ' ')} • {exercise.type}
+                <div className="flex items-start gap-4">
+                  {exercise.imageUrl && (
+                    <img
+                      src={exercise.imageUrl}
+                      alt={exercise.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h3
+                      className="font-semibold text-lg mb-1"
+                      style={{ color: 'var(--accent-primary)' }}
+                    >
+                      {exercise.name}
+                    </h3>
+                    <p className="text-sm capitalize mb-2" style={{ color: 'var(--text-muted)' }}>
+                      {exercise.muscleGroup.replace('_', ' ')} • {exercise.type}
+                    </p>
+                    {exercise.equipment && (
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        🏋️ {exercise.equipment}
                       </p>
-                      {exercise.equipment && (
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          🏋️ {exercise.equipment}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
-                </button>
+                </div>
+              </button>
               );
             })}
             </div>
@@ -293,7 +293,7 @@ export default function ExerciseSwapModal({
                 background: 'linear-gradient(to top, var(--bg-card), transparent)',
               }}
             />
-          )}
+        )}
         </div>
       </div>
     </div>

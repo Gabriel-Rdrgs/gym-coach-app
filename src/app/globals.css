@@ -173,6 +173,7 @@ h3 {
   background: linear-gradient(135deg, #00eeff, var(--accent-primary));
 }
 
+
 .btn-secondary {
   background: transparent;
   color: var(--accent-primary);
@@ -198,6 +199,7 @@ h3 {
   border: 1px solid var(--accent-primary);
   border-radius: 20px;
   padding: 32px;
+  padding-bottom: 10px;
   box-shadow: 0 0 20px rgba(0, 217, 255, 0.15);
   transition: var(--transition);
   position: relative;
@@ -371,18 +373,51 @@ h3 {
    ======================================== */
 main.sidebar-open {
   margin-left: 256px;
-  transition: margin-left 0.3s ease-in-out;
+  padding-left: 64px; /* Espaçamento adicional entre sidebar e conteúdo */
+  padding-right: 64px; /* Espaçamento da borda direita */
+  transition: margin-left 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out;
 }
 
 main.sidebar-closed {
   margin-left: 80px;
-  transition: margin-left 0.3s ease-in-out;
+  padding-left: 64px; /* Espaçamento adicional entre sidebar e conteúdo */
+  padding-right: 64px; /* Espaçamento da borda direita */
+  transition: margin-left 0.3s ease-in-out, padding-left 0.3s ease-in-out, padding-right 0.3s ease-in-out;
+}
+
+/* ========================================
+   ESPAÇAMENTO ENTRE SEÇÕES DE CARDS
+   ======================================== */
+.section-spacing {
+  margin-bottom: 48px; /* Mobile */
+}
+
+@media (min-width: 768px) {
+  .section-spacing {
+    margin-bottom: 64px; /* Tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .section-spacing {
+    margin-bottom: 80px; /* Desktop */
+  }
 }
 
 @media (max-width: 1024px) {
   main.sidebar-open,
   main.sidebar-closed {
     margin-left: 0 !important;
+    padding-left: 32px !important; /* Menor padding em tablet */
+    padding-right: 32px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  main.sidebar-open,
+  main.sidebar-closed {
+    padding-left: 20px !important; /* Padding menor em mobile */
+    padding-right: 20px !important;
   }
 }
 

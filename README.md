@@ -19,13 +19,13 @@ Aplicação completa de gerenciamento de treinos com interface moderna inspirada
 - Criação de treinos com templates pré-definidos
 - Programas de treino (Push/Pull/Legs, Upper/Lower, Full Body)
 - Sugestão automática de pesos baseada em histórico
-- Cálculo automático de volume total e tempo estimado
+- Cálculo automático de séries válidas e tempo estimado
 - Troca de exercícios durante a criação
 - Visualização detalhada de treinos salvos
 
 ### 📈 Acompanhamento de Progresso
 - Página de progresso com gráficos interativos
-- Evolução de peso, volume e séries válidas
+- Evolução de peso e séries válidas
 - Gráficos por grupo muscular
 - Comparação de métricas ao longo do tempo
 
