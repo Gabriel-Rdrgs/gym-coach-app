@@ -48,9 +48,13 @@ export async function GET(request: NextRequest) {
       include: { workout: true; sets: true };
     }>;
     
-    workoutExercises.sort((a: WorkoutExerciseWithRelations, b: WorkoutExerciseWithRelations) => {
+    const sortedWorkoutExercises: WorkoutExerciseWithRelations[] = [...workoutExercises];
+    sortedWorkoutExercises.sort((a, b) => {
       return b.workout.date.getTime() - a.workout.date.getTime();
     });
+    
+    // Usar a versão ordenada
+    const workoutExercisesSorted = sortedWorkoutExercises;
 
     // Buscar PR do exercício
     const pr = await prisma.personalRecord.findFirst({
@@ -60,8 +64,8 @@ export async function GET(request: NextRequest) {
 
     // Encontrar última série registrada
     let lastSet = null;
-    if (workoutExercises.length > 0) {
-      const lastWorkoutExercise = workoutExercises[0];
+    if (workoutExercisesSorted.length > 0) {
+      const lastWorkoutExercise = workoutExercisesSorted[0];
       if (lastWorkoutExercise.sets.length > 0) {
         // Pegar a última série do último treino
         const sets = lastWorkoutExercise.sets;
@@ -73,8 +77,8 @@ export async function GET(request: NextRequest) {
     let averageWeight = null;
     let averageReps = null;
     let averageRir = null;
-    if (workoutExercises.length > 0 && workoutExercises[0].sets.length > 0) {
-      const lastWorkoutSets = workoutExercises[0].sets;
+    if (workoutExercisesSorted.length > 0 && workoutExercisesSorted[0].sets.length > 0) {
+      const lastWorkoutSets = workoutExercisesSorted[0].sets;
       const validSets = lastWorkoutSets.filter(s => s.weight > 0 && s.reps > 0);
       if (validSets.length > 0) {
         averageWeight = validSets.reduce((sum, s) => sum + s.weight, 0) / validSets.length;
@@ -88,8 +92,8 @@ export async function GET(request: NextRequest) {
 
     // Calcular tendência dos últimos treinos (últimos 3-5 treinos)
     let trendData = null;
-    if (workoutExercises.length >= 2) {
-      const recentWorkouts = workoutExercises.slice(0, Math.min(5, workoutExercises.length));
+    if (workoutExercisesSorted.length >= 2) {
+      const recentWorkouts = workoutExercisesSorted.slice(0, Math.min(5, workoutExercisesSorted.length));
       const workoutAverages = recentWorkouts.map(we => {
         const validSets = we.sets.filter(s => s.weight > 0 && s.reps > 0);
         if (validSets.length === 0) return null;
@@ -118,8 +122,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calcular tempo desde o último treino
-    const daysSinceLastWorkout = workoutExercises.length > 0
-      ? Math.floor((Date.now() - workoutExercises[0].workout.date.getTime()) / (1000 * 60 * 60 * 24))
+    const daysSinceLastWorkout = workoutExercisesSorted.length > 0
+      ? Math.floor((Date.now() - workoutExercisesSorted[0].workout.date.getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
     return NextResponse.json({
@@ -134,7 +138,7 @@ export async function GET(request: NextRequest) {
             weight: lastSet.weight,
             reps: lastSet.reps,
             rir: lastSet.rir,
-            date: workoutExercises[0].workout.date,
+            date: workoutExercisesSorted[0].workout.date,
           }
         : null,
       averageSet: averageWeight
@@ -153,7 +157,7 @@ export async function GET(request: NextRequest) {
             date: pr.date,
           }
         : null,
-      recentWorkouts: workoutExercises.length,
+      recentWorkouts: workoutExercisesSorted.length,
     });
   } catch (error: any) {
     console.error('Erro ao buscar histórico do exercício:', error);
