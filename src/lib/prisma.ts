@@ -7,13 +7,28 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Criar pool de conexão PostgreSQL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Validar DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL não está definida. Por favor, configure a variável de ambiente DATABASE_URL."
+  );
+}
 
-// Criar adapter do PostgreSQL
-const adapter = new PrismaPg(pool);
+// Criar pool de conexão PostgreSQL
+let pool: Pool;
+let adapter: PrismaPg;
+
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  // Criar adapter do PostgreSQL
+  adapter = new PrismaPg(pool);
+} catch (error) {
+  console.error("Erro ao criar pool de conexão PostgreSQL:", error);
+  throw error;
+}
 
 export const prisma =
   globalForPrisma.prisma ??

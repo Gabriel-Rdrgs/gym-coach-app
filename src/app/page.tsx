@@ -6,19 +6,20 @@ import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 export const dynamic = 'force-dynamic';
 
 async function getStats() {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Domingo da semana atual
-  startOfWeek.setHours(0, 0, 0, 0);
-  
-  const startOfLastWeek = new Date(startOfWeek);
-  startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-  
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  try {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Domingo da semana atual
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+    
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts, allWorkouts, allMetrics] = await Promise.all([
+    const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts, allWorkouts, allMetrics] = await Promise.all([
     prisma.workout.findMany({
       take: 5,
       orderBy: { date: 'desc' },
@@ -124,21 +125,39 @@ async function getStats() {
     ? thisMonthAvgWeight - lastMonthAvgWeight
     : null;
 
-  return {
-    recentWorkouts,
-    latestMetric,
-    totalExercises,
-    totalWorkouts,
-    totalMetrics,
-    // Estatísticas avançadas
-    thisWeekWorkouts: thisWeekWorkouts.length,
-    lastWeekWorkouts: lastWeekWorkouts.length,
-    thisWeekValidSets,
-    lastWeekValidSets,
-    avgWeeklyWorkouts,
-    weightTrend,
-    thisMonthAvgWeight,
-  };
+    return {
+      recentWorkouts,
+      latestMetric,
+      totalExercises,
+      totalWorkouts,
+      totalMetrics,
+      // Estatísticas avançadas
+      thisWeekWorkouts: thisWeekWorkouts.length,
+      lastWeekWorkouts: lastWeekWorkouts.length,
+      thisWeekValidSets,
+      lastWeekValidSets,
+      avgWeeklyWorkouts,
+      weightTrend,
+      thisMonthAvgWeight,
+    };
+  } catch (error) {
+    console.error('Erro ao buscar estatísticas:', error);
+    // Retornar valores padrão em caso de erro
+    return {
+      recentWorkouts: [],
+      latestMetric: null,
+      totalExercises: 0,
+      totalWorkouts: 0,
+      totalMetrics: 0,
+      thisWeekWorkouts: 0,
+      lastWeekWorkouts: 0,
+      thisWeekValidSets: 0,
+      lastWeekValidSets: 0,
+      avgWeeklyWorkouts: 0,
+      weightTrend: null,
+      thisMonthAvgWeight: null,
+    };
+  }
 }
 
 const formatDate = (date: Date) => {
@@ -174,7 +193,27 @@ const calculateValidSets = (workout: any) => {
 };
 
 export default async function Home() {
-  const stats = await getStats();
+  let stats;
+  try {
+    stats = await getStats();
+  } catch (error) {
+    console.error('Erro ao carregar página inicial:', error);
+    // Usar valores padrão em caso de erro
+    stats = {
+      recentWorkouts: [],
+      latestMetric: null,
+      totalExercises: 0,
+      totalWorkouts: 0,
+      totalMetrics: 0,
+      thisWeekWorkouts: 0,
+      lastWeekWorkouts: 0,
+      thisWeekValidSets: 0,
+      lastWeekValidSets: 0,
+      avgWeeklyWorkouts: 0,
+      weightTrend: null,
+      thisMonthAvgWeight: null,
+    };
+  }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
