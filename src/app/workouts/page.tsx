@@ -199,21 +199,54 @@ export default function WorkoutsPage() {
             <h2 className="text-2xl font-bold text-glow mb-3" style={{ color: 'var(--accent-primary)' }}>
               {selectedTemplate}
             </h2>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Preencha os dados do seu treino
               </p>
-              {currentWorkout.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg border" style={{ 
-                  background: 'rgba(0, 217, 255, 0.05)', 
-                  borderColor: 'var(--accent-primary)' 
-                }}>
-                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>⏱️</span>
-                  <span className="text-sm font-semibold" style={{ color: 'var(--accent-primary)' }}>
-                    {formatWorkoutTime(estimateWorkoutTime(currentWorkout).totalMinutes)}
-                  </span>
-                </div>
-              )}
+              {currentWorkout.length > 0 && (() => {
+                const timeEstimate = estimateWorkoutTime(currentWorkout);
+                const totalVolume = currentWorkout.reduce((total, exercise) => {
+                  return total + exercise.sets.reduce((sum, set) => {
+                    return sum + (set.weight * set.reps);
+                  }, 0);
+                }, 0);
+                const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+                const validSets = currentWorkout.reduce((sum, exercise) => {
+                  return sum + exercise.sets.filter(set => set.weight > 0 && set.reps > 0).length;
+                }, 0);
+
+                return (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
+                      background: 'rgba(0, 217, 255, 0.1)', 
+                      borderColor: 'var(--accent-primary)' 
+                    }}>
+                      <span className="text-sm" style={{ color: 'var(--accent-primary)' }}>⏱️</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                        {formatWorkoutTime(timeEstimate.totalMinutes)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
+                      background: 'rgba(167, 139, 250, 0.1)', 
+                      borderColor: 'var(--accent-secondary)' 
+                    }}>
+                      <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>📊</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
+                        {totalVolume.toFixed(1)} kg
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
+                      background: 'rgba(16, 185, 129, 0.1)', 
+                      borderColor: 'var(--accent-success)' 
+                    }}>
+                      <span className="text-sm" style={{ color: 'var(--accent-success)' }}>✓</span>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-success)' }}>
+                        {validSets}/{totalSets} séries
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <button
@@ -260,6 +293,70 @@ export default function WorkoutsPage() {
 
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
+
+        {/* Card de Resumo do Treino */}
+        {currentWorkout.length > 0 && (() => {
+          const timeEstimate = estimateWorkoutTime(currentWorkout);
+          const totalVolume = currentWorkout.reduce((total, exercise) => {
+            return total + exercise.sets.reduce((sum, set) => {
+              return sum + (set.weight * set.reps);
+            }, 0);
+          }, 0);
+          const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+          const validSets = currentWorkout.reduce((sum, exercise) => {
+            return sum + exercise.sets.filter(set => set.weight > 0 && set.reps > 0).length;
+          }, 0);
+          const totalExercises = currentWorkout.length;
+
+          return (
+            <div className="card-neon mb-8" style={{ 
+              padding: '32px',
+              background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
+              border: '2px solid var(--accent-primary)',
+            }}>
+              <h3 className="text-xl font-bold mb-6 text-glow" style={{ color: 'var(--accent-primary)' }}>
+                📊 Resumo do Treino
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Tempo Estimado
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                    {formatWorkoutTime(timeEstimate.totalMinutes)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Volume Total
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-secondary)' }}>
+                    {totalVolume.toFixed(1)} kg
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Séries Válidas
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-success)' }}>
+                    {validSets}/{totalSets}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Exercícios
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                    {totalExercises}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Espaçamento vertical */}
+        <div style={{ height: '24px' }}></div>
 
         <div className="flex gap-4">
           <button
