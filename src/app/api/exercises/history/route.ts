@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,11 @@ export async function GET(request: NextRequest) {
     });
 
     // Ordenar por data do treino manualmente
-    workoutExercises.sort((a: typeof workoutExercises[0], b: typeof workoutExercises[0]) => {
+    type WorkoutExerciseWithRelations = Prisma.WorkoutExerciseGetPayload<{
+      include: { workout: true; sets: true };
+    }>;
+    
+    workoutExercises.sort((a: WorkoutExerciseWithRelations, b: WorkoutExerciseWithRelations) => {
       return b.workout.date.getTime() - a.workout.date.getTime();
     });
 
