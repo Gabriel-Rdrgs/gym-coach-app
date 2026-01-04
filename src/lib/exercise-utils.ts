@@ -73,7 +73,7 @@ export async function suggestExercises(
 }
 
 /**
- * Verifica se um PR foi batido
+ * Verifica se um PR foi batido e salva se for
  */
 export async function checkAndSavePR(
   exerciseId: number,
@@ -82,11 +82,41 @@ export async function checkAndSavePR(
   workoutId?: number
 ) {
   try {
-    // Nota: Após a migração, usar prisma.personalRecord
-    // Por enquanto, retornar null até a migração ser executada
+    // Buscar o melhor PR atual para este exercício
+    const existingPRs = await prisma.personalRecord.findMany({
+      where: { exerciseId },
+      orderBy: { weight: 'desc' },
+      take: 1,
+    });
+
+    const currentBestPR = existingPRs.length > 0 ? existingPRs[0] : null;
+    const isPR = !currentBestPR || weight > currentBestPR.weight;
+
+    if (isPR) {
+      // Salvar novo PR
+      const newPR = await prisma.personalRecord.create({
+        data: {
+          exerciseId,
+          weight,
+          reps,
+          workoutId: workoutId || null,
+        },
+        include: {
+          exercise: true,
+        },
+      });
+
+      return {
+        isPR: true,
+        currentPR: newPR,
+        previousPR: currentBestPR,
+      };
+    }
+
     return {
       isPR: false,
-      currentPR: null,
+      currentPR: currentBestPR,
+      previousPR: null,
     };
   } catch (error) {
     console.error('Erro ao verificar PR:', error);

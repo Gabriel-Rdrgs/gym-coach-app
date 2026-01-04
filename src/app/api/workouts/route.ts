@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkAndSavePR } from '@/lib/exercise-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +57,43 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ workout }, { status: 201 });
+    // Verificar PRs para cada exercício
+    const prsDetected: any[] = [];
+    for (const ex of exercises) {
+      const exercise = await prisma.exercise.findUnique({
+        where: { name: ex.exerciseName } as any,
+      });
+
+      if (exercise) {
+        // Encontrar o maior peso e reps para este exercício no treino
+        const sets = ex.sets.filter((s: any) => s.weight > 0 && s.reps > 0);
+        if (sets.length > 0) {
+          const maxWeightSet = sets.reduce((max: any, set: any) =>
+            set.weight > max.weight ? set : max
+          );
+
+          const prResult = await checkAndSavePR(
+            exercise.id,
+            maxWeightSet.weight,
+            maxWeightSet.reps,
+            workout.id
+          );
+
+          if (prResult?.isPR) {
+            prsDetected.push({
+              exercise: exercise.name,
+              weight: maxWeightSet.weight,
+              reps: maxWeightSet.reps,
+            });
+          }
+        }
+      }
+    }
+
+    return NextResponse.json(
+      { workout, prsDetected },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error('Erro ao criar treino:', error);
     return NextResponse.json(

@@ -54,14 +54,18 @@ model Set {
 }
 
 model Metric {
-  id     Int      @id @default(autoincrement())
-  date   DateTime @default(now())
-  weight Float?
-  waist  Float?
-  sleep  Float?
-  energy Int?
-  stress Int?
-  notes  String?
+  id                  Int      @id @default(autoincrement())
+  date               DateTime @default(now())
+  weight             Float?
+  waist              Float?
+  armCircumference  Float?   // Circunferência do braço (cm)
+  thighCircumference Float?   // Circunferência da coxa (cm)
+  chestCircumference Float?   // Circunferência do peito (cm)
+  bodyFatPercentage Float?   // Percentual de gordura corporal (%)
+  sleep              Float?
+  energy             Int?
+  stress             Int?
+  notes              String?
 }
 
 // Tabela para relacionar exercícios alternativos/similares

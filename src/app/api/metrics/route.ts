@@ -4,13 +4,29 @@ import { prisma } from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { date, weight, waist, sleep, energy, stress, notes } = body;
+    const {
+      date,
+      weight,
+      waist,
+      armCircumference,
+      thighCircumference,
+      chestCircumference,
+      bodyFatPercentage,
+      sleep,
+      energy,
+      stress,
+      notes,
+    } = body;
 
     const metric = await prisma.metric.create({
       data: {
         date: date ? new Date(date) : new Date(),
         weight: weight ? parseFloat(weight) : null,
         waist: waist ? parseFloat(waist) : null,
+        armCircumference: armCircumference ? parseFloat(armCircumference) : null,
+        thighCircumference: thighCircumference ? parseFloat(thighCircumference) : null,
+        chestCircumference: chestCircumference ? parseFloat(chestCircumference) : null,
+        bodyFatPercentage: bodyFatPercentage ? parseFloat(bodyFatPercentage) : null,
         sleep: sleep ? parseFloat(sleep) : null,
         energy: energy ? parseInt(energy) : null,
         stress: stress ? parseInt(stress) : null,

@@ -1,14 +1,28 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 
 async function getStats() {
-  const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts] = await Promise.all([
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay()); // Domingo da semana atual
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  const startOfLastWeek = new Date(startOfWeek);
+  startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+  
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts, allWorkouts, allMetrics] = await Promise.all([
     prisma.workout.findMany({
       take: 5,
       orderBy: { date: 'desc' },
       include: {
         exercises: {
           include: {
+            exercise: true,
             sets: true,
           },
         },
@@ -20,10 +34,92 @@ async function getStats() {
     }),
     prisma.exercise.count(),
     prisma.workout.count(),
+    prisma.workout.findMany({
+      include: {
+        exercises: {
+          include: {
+            exercise: true,
+            sets: true,
+          },
+        },
+      },
+      orderBy: { date: 'desc' },
+    }),
+    prisma.metric.findMany({
+      orderBy: { date: 'desc' },
+    }),
   ]);
 
   const latestMetric = recentMetrics[0] || null;
   const totalMetrics = await prisma.metric.count();
+
+  // Calcular estatísticas da semana atual
+  const thisWeekWorkouts = allWorkouts.filter(w => new Date(w.date) >= startOfWeek);
+  const lastWeekWorkouts = allWorkouts.filter(w => {
+    const workoutDate = new Date(w.date);
+    return workoutDate >= startOfLastWeek && workoutDate < startOfWeek;
+  });
+
+  // Calcular séries válidas
+  const calculateWeekValidSets = (workouts: any[]) => {
+    return workouts.reduce((sum, workout) => {
+      const workoutFormatted = {
+        date: workout.date,
+        exercises: workout.exercises.map((ex: any) => ({
+          exercise: {
+            muscleGroup: ex.exercise?.muscleGroup || '',
+            name: ex.exercise?.name || '',
+            type: ex.exercise?.type || 'isolation',
+          },
+          sets: ex.sets.map((set: any) => ({
+            rir: set.rir,
+            weight: set.weight,
+            reps: set.reps,
+          })),
+        })),
+      };
+      const result = calculateValidSetsForWorkout(workoutFormatted);
+      return sum + result.totalValidSets;
+    }, 0);
+  };
+
+  const thisWeekValidSets = calculateWeekValidSets(thisWeekWorkouts);
+  const lastWeekValidSets = calculateWeekValidSets(lastWeekWorkouts);
+
+  // Calcular média semanal de treinos (últimas 4 semanas)
+  const fourWeeksAgo = new Date(startOfWeek);
+  fourWeeksAgo.setDate(startOfWeek.getDate() - 28);
+  const recentWorkoutsForAvg = allWorkouts.filter(w => new Date(w.date) >= fourWeeksAgo);
+  const weeklyCounts: { [key: string]: number } = {};
+  recentWorkoutsForAvg.forEach(workout => {
+    const workoutDate = new Date(workout.date);
+    const weekStart = new Date(workoutDate);
+    weekStart.setDate(workoutDate.getDate() - workoutDate.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekKey = weekStart.toISOString().split('T')[0];
+    weeklyCounts[weekKey] = (weeklyCounts[weekKey] || 0) + 1;
+  });
+  const avgWeeklyWorkouts = Object.keys(weeklyCounts).length > 0
+    ? Object.values(weeklyCounts).reduce((a, b) => a + b, 0) / Object.keys(weeklyCounts).length
+    : 0;
+
+  // Calcular tendência de peso
+  const thisMonthMetrics = allMetrics.filter(m => new Date(m.date) >= startOfMonth);
+  const lastMonthMetrics = allMetrics.filter(m => {
+    const metricDate = new Date(m.date);
+    return metricDate >= startOfLastMonth && metricDate <= endOfLastMonth;
+  });
+  
+  const thisMonthAvgWeight = thisMonthMetrics.length > 0 && thisMonthMetrics[0].weight
+    ? thisMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / thisMonthMetrics.filter(m => m.weight).length
+    : null;
+  const lastMonthAvgWeight = lastMonthMetrics.length > 0 && lastMonthMetrics[0].weight
+    ? lastMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / lastMonthMetrics.filter(m => m.weight).length
+    : null;
+
+  const weightTrend = thisMonthAvgWeight && lastMonthAvgWeight
+    ? thisMonthAvgWeight - lastMonthAvgWeight
+    : null;
 
   return {
     recentWorkouts,
@@ -31,6 +127,14 @@ async function getStats() {
     totalExercises,
     totalWorkouts,
     totalMetrics,
+    // Estatísticas avançadas
+    thisWeekWorkouts: thisWeekWorkouts.length,
+    lastWeekWorkouts: lastWeekWorkouts.length,
+    thisWeekValidSets,
+    lastWeekValidSets,
+    avgWeeklyWorkouts,
+    weightTrend,
+    thisMonthAvgWeight,
   };
 }
 
@@ -44,13 +148,26 @@ const formatDate = (date: Date) => {
   }).format(date);
 };
 
-const calculateTotalVolume = (workout: any) => {
-  return workout.exercises.reduce((total: number, ex: any) => {
-    const exerciseVolume = ex.sets.reduce((sum: number, set: any) => {
-      return sum + set.weight * set.reps;
-    }, 0);
-    return total + exerciseVolume;
-  }, 0);
+const calculateValidSets = (workout: any) => {
+  // Converter o workout para o formato esperado pela função
+  const workoutFormatted = {
+    date: workout.date,
+    exercises: workout.exercises.map((ex: any) => ({
+      exercise: {
+        muscleGroup: ex.exercise?.muscleGroup || '',
+        name: ex.exercise?.name || '',
+        type: ex.exercise?.type || 'isolation',
+      },
+      sets: ex.sets.map((set: any) => ({
+        rir: set.rir,
+        weight: set.weight,
+        reps: set.reps,
+      })),
+    })),
+  };
+  
+  const result = calculateValidSetsForWorkout(workoutFormatted);
+  return result.totalValidSets;
 };
 
 export default async function Home() {
@@ -129,6 +246,121 @@ export default async function Home() {
               </div>
               <div className="text-base font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                 Peso Atual
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Estatísticas Avançadas - Segunda Linha */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
+          {/* Treinos Esta Semana */}
+          <div className="card-neon" style={{ padding: '32px' }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-3xl">📅</div>
+              {stats.lastWeekWorkouts > 0 && (
+                <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                  stats.thisWeekWorkouts >= stats.lastWeekWorkouts ? 'text-green-400' : 'text-red-400'
+                }`} style={{
+                  background: stats.thisWeekWorkouts >= stats.lastWeekWorkouts 
+                    ? 'rgba(16, 185, 129, 0.2)' 
+                    : 'rgba(239, 68, 68, 0.2)',
+                }}>
+                  {stats.thisWeekWorkouts >= stats.lastWeekWorkouts ? '↑' : '↓'} {Math.abs(stats.thisWeekWorkouts - stats.lastWeekWorkouts)}
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-bold mb-2 text-glow" style={{ color: 'var(--accent-primary)' }}>
+              {stats.thisWeekWorkouts}
+            </div>
+            <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Treinos Esta Semana
+            </div>
+            {stats.lastWeekWorkouts > 0 && (
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Semana passada: {stats.lastWeekWorkouts}
+              </div>
+            )}
+          </div>
+
+          {/* Séries Válidas Esta Semana */}
+          <div className="card-neon" style={{ padding: '32px' }}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-3xl">✅</div>
+              {stats.lastWeekValidSets > 0 && (
+                <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                  stats.thisWeekValidSets >= stats.lastWeekValidSets ? 'text-green-400' : 'text-red-400'
+                }`} style={{
+                  background: stats.thisWeekValidSets >= stats.lastWeekValidSets 
+                    ? 'rgba(16, 185, 129, 0.2)' 
+                    : 'rgba(239, 68, 68, 0.2)',
+                }}>
+                  {stats.thisWeekValidSets >= stats.lastWeekValidSets ? '↑' : '↓'} {Math.abs(stats.thisWeekValidSets - stats.lastWeekValidSets).toFixed(1)}
+                </div>
+              )}
+            </div>
+            <div className="text-3xl font-bold mb-2 text-glow" style={{ color: 'var(--accent-success)' }}>
+              {stats.thisWeekValidSets.toFixed(1)}
+            </div>
+            <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Séries Válidas
+            </div>
+            {stats.lastWeekValidSets > 0 && (
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Semana passada: {stats.lastWeekValidSets.toFixed(1)}
+              </div>
+            )}
+          </div>
+
+          {/* Média Semanal */}
+          <div className="card-neon" style={{ padding: '32px' }}>
+            <div className="text-3xl mb-4">📈</div>
+            <div className="text-3xl font-bold mb-2 text-glow" style={{ color: 'var(--accent-secondary)' }}>
+              {stats.avgWeeklyWorkouts.toFixed(1)}
+            </div>
+            <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Média Semanal
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Últimas 4 semanas
+            </div>
+          </div>
+
+          {/* Tendência de Peso */}
+          {stats.weightTrend !== null ? (
+            <div className="card-neon" style={{ padding: '32px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-3xl">⚖️</div>
+                <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                  stats.weightTrend >= 0 ? 'text-green-400' : 'text-red-400'
+                }`} style={{
+                  background: stats.weightTrend >= 0 
+                    ? 'rgba(16, 185, 129, 0.2)' 
+                    : 'rgba(239, 68, 68, 0.2)',
+                }}>
+                  {stats.weightTrend >= 0 ? '↑' : '↓'} {Math.abs(stats.weightTrend).toFixed(1)} kg
+                </div>
+              </div>
+              <div className="text-3xl font-bold mb-2 text-glow" style={{ color: 'var(--accent-primary)' }}>
+                {stats.thisMonthAvgWeight?.toFixed(1)} kg
+              </div>
+              <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+                Média do Mês
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                vs. mês anterior
+              </div>
+            </div>
+          ) : (
+            <div className="card-neon" style={{ padding: '32px', opacity: 0.6 }}>
+              <div className="text-3xl mb-4">⚖️</div>
+              <div className="text-3xl font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
+                --
+              </div>
+              <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+                Tendência de Peso
+              </div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Dados insuficientes
               </div>
             </div>
           )}
@@ -301,7 +533,7 @@ export default async function Home() {
             >
               Treinos Recentes
             </h2>
-            <Link href="/workouts">
+            <Link href="/workouts/list">
               <span 
                 className="text-base font-semibold hover:underline transition-all inline-flex items-center gap-2"
                 style={{ color: 'var(--accent-secondary)' }}
@@ -327,7 +559,7 @@ export default async function Home() {
           ) : (
             <div className="space-y-8">
               {stats.recentWorkouts.map((workout) => {
-                const totalVolume = calculateTotalVolume(workout);
+                const validSets = calculateValidSets(workout);
                 const totalSets = workout.exercises.reduce((sum: number, ex: any) => sum + ex.sets.length, 0);
 
                 return (
@@ -344,10 +576,10 @@ export default async function Home() {
                         </div>
                         <div className="text-right ml-12">
                           <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
-                            Volume Total
+                            Séries Válidas
                           </div>
                           <div className="text-3xl font-bold text-glow mb-3" style={{ color: 'var(--accent-primary)' }}>
-                            {totalVolume.toFixed(1)} kg
+                            {validSets.toFixed(1)}
                           </div>
                           <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
                             {workout.exercises.length} exercícios • {totalSets} séries

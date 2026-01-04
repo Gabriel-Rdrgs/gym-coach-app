@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import SidebarWrapper from "@/components/SidebarWrapper";
+import ToastContainer from "@/components/Toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,13 +45,14 @@ export default function RootLayout({
         }}
       >
         <SidebarWrapper />
+        <ToastContainer />
         <main 
           className="min-h-screen transition-all duration-300 sidebar-open"
           style={{
             paddingTop: '80px', // Espaço para o header fixo
           }}
-        >
-          {children}
+      >
+        {children}
         </main>
       </body>
     </html>

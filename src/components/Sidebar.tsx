@@ -30,7 +30,17 @@ const navItems: NavItem[] = [
   {
     name: 'Métricas',
     href: '/metrics',
+    icon: '📊',
+  },
+  {
+    name: 'Progresso',
+    href: '/progress',
     icon: '📈',
+  },
+  {
+    name: 'PRs',
+    href: '/prs',
+    icon: '🏆',
   },
   {
     name: 'Dieta',
@@ -49,7 +59,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Aplicar classe ao body para ajustar o layout
+    // Aplicar classe ao main para ajustar o layout
     const main = document.querySelector('main');
     if (main) {
       if (isOpen) {
@@ -62,14 +72,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    // Atualizar o header quando o sidebar mudar
-    const header = document.querySelector('header');
-    if (header) {
-      (header as HTMLElement).style.marginLeft = isOpen ? '256px' : '80px';
-    }
-  }, [isOpen]);
-
   const isActive = (href: string) => {
     if (href === '/') {
       return pathname === '/';
@@ -79,15 +81,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile Toggle Button */}
+      {/* Mobile Toggle Button - Abrir Sidebar */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-3 rounded-lg border-2 transition-all"
+        className="fixed top-20 left-4 z-50 lg:hidden p-3 rounded-lg border-2 transition-all hover:scale-110"
         style={{
           borderColor: 'var(--accent-primary)',
           background: 'var(--bg-card)',
           color: 'var(--accent-primary)',
+          boxShadow: '0 0 15px rgba(0, 217, 255, 0.3)',
         }}
+        title="Abrir menu"
       >
         <span className="text-2xl">☰</span>
       </button>
@@ -103,7 +107,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed z-50
+          fixed z-50 flex flex-col
           transition-all duration-300 ease-in-out
           ${isOpen ? 'w-64' : 'w-20'}
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -119,7 +123,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         }}
       >
         {/* Navigation Items */}
-        <nav className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        <nav className="p-6 space-y-4 overflow-y-auto flex-1" style={{ paddingBottom: '120px' }}>
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -149,18 +153,41 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        {isOpen && (
-          <div
-            className="absolute bottom-0 left-0 right-0 p-6 border-t text-center text-xs"
+        {/* Sidebar Footer com Botão de Toggle */}
+        <div
+          className="absolute bottom-0 left-0 right-0 border-t"
+          style={{
+            borderColor: 'rgba(0, 217, 255, 0.2)',
+            background: 'var(--bg-card)',
+          }}
+        >
+          {/* Botão de Toggle */}
+          <button
+            onClick={onToggle}
+            className="w-full p-4 flex items-center justify-center gap-3 transition-all hover:bg-cyan-500/10"
             style={{
-              borderColor: 'rgba(0, 217, 255, 0.2)',
-              color: 'var(--text-muted)',
+              color: 'var(--accent-primary)',
             }}
+            title={isOpen ? 'Recolher sidebar' : 'Expandir sidebar'}
           >
-            v1.0.0
-          </div>
-        )}
+            <span className="text-xl flex-shrink-0">{isOpen ? '◀' : '▶'}</span>
+            {isOpen && (
+              <span className="text-sm font-semibold whitespace-nowrap">Recolher</span>
+            )}
+          </button>
+
+          {/* Versão */}
+          {isOpen && (
+            <div
+              className="px-4 pb-3 text-center text-xs"
+              style={{
+                color: 'var(--text-muted)',
+              }}
+            >
+              v1.0.0
+            </div>
+          )}
+        </div>
       </aside>
 
     </>

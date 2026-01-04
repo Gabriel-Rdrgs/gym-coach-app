@@ -371,10 +371,12 @@ h3 {
    ======================================== */
 main.sidebar-open {
   margin-left: 256px;
+  transition: margin-left 0.3s ease-in-out;
 }
 
 main.sidebar-closed {
   margin-left: 80px;
+  transition: margin-left 0.3s ease-in-out;
 }
 
 @media (max-width: 1024px) {
@@ -382,6 +384,109 @@ main.sidebar-closed {
   main.sidebar-closed {
     margin-left: 0 !important;
   }
+}
+
+/* ========================================
+   ANIMAÇÕES
+   ======================================== */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes selected-pulse {
+  0% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.6);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 50px rgba(167, 139, 250, 0.8);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(167, 139, 250, 0.6);
+  }
+}
+
+/* ========================================
+   RECHARTS TOOLTIP CUSTOMIZAÇÃO
+   ======================================== */
+.recharts-tooltip-wrapper,
+.recharts-default-tooltip,
+.recharts-custom-tooltip,
+div[class*="recharts-tooltip"] {
+  background-color: rgba(10, 10, 20, 0.98) !important;
+  background: rgba(10, 10, 20, 0.98) !important;
+  border: 1px solid #00d9ff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.4) !important;
+  color: #ffffff !important;
+  padding: 12px !important;
+  margin: 0 !important;
+}
+
+.recharts-tooltip-wrapper *,
+.recharts-default-tooltip *,
+.recharts-custom-tooltip *,
+div[class*="recharts-tooltip"] * {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+.recharts-tooltip-label,
+.recharts-custom-tooltip p:first-child {
+  color: #00d9ff !important;
+  font-weight: bold !important;
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.recharts-tooltip-item {
+  color: #ffffff !important;
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+.recharts-tooltip-item-name {
+  color: #ffffff !important;
+}
+
+.recharts-tooltip-item-value {
+  color: #ffffff !important;
+}
+
+.recharts-tooltip-item-separator {
+  color: #94a3b8 !important;
+}
+
+/* Forçar estilos mesmo quando não está visível */
+.recharts-tooltip-wrapper[style*="pointer-events"],
+.recharts-tooltip-wrapper[style*="visibility"] {
+  background-color: rgba(10, 10, 20, 0.98) !important;
+  background: rgba(10, 10, 20, 0.98) !important;
 }
 
 @media (max-width: 768px) {

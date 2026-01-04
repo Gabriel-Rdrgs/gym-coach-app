@@ -188,3 +188,28 @@
 - Manter consistência visual em todas as páginas
 - Documentar todas as novas funcionalidades
 
+
+
+1. Sugestão automática de pesos (média prioridade, alto impacto)
+Sugerir pesos/reps baseado no histórico do exercício:
+Mostrar última série registrada
+Sugerir progressão (aumento de peso/reps)
+Mostrar PR atual para referência
+2. Estimativa de tempo de treino
+Calcular duração estimada:
+Tempo médio por série/exercício
+Duração total do treino
+Mostrar no dashboard e na criação
+3. Heatmap de treinos (calendário visual)
+Calendário visual mostrando:
+Dias com treino (intensidade por cor)
+Frequência semanal/mensal
+Identificar padrões e períodos sem treino
+4. Melhorias na visualização de exercícios
+Preview de GIFs na lista
+Modal melhorado com instruções
+Dicas de execução
+5. Programas de treino personalizados
+Criar programas semanais (ex: PPL 6x/semana)
+Calendário de treinos
+Progressão automática

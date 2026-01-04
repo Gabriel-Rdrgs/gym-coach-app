@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { workoutTemplates, workoutPrograms } from '@/data/templates';
 import ExerciseSwapModal from '@/components/ExerciseSwapModal';
+import WorkoutCard from '@/components/WorkoutCard';
+import { useToast } from '@/components/Toast';
+import { estimateWorkoutTime, formatWorkoutTime } from '@/lib/workout-time-utils';
+import { getExerciseType } from '@/lib/exercise-types-map';
 
 interface SetData {
   setNumber: number;
@@ -14,6 +18,7 @@ interface SetData {
 interface ExerciseData {
   name: string;
   muscleGroup: string;
+  type?: string; // compound ou isolation
   sets: SetData[];
 }
 
@@ -26,6 +31,7 @@ export default function WorkoutsPage() {
   const [notes, setNotes] = useState('');
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapExerciseIndex, setSwapExerciseIndex] = useState<number | null>(null);
+  const toast = useToast();
 
   const handleProgramSelect = (program: keyof typeof workoutPrograms) => {
     setSelectedProgram(program);
@@ -37,6 +43,7 @@ export default function WorkoutsPage() {
     // Inicializar cada exercício com 3 séries vazias
     const workoutWithSets: ExerciseData[] = exercises.map((ex) => ({
       ...ex,
+      type: getExerciseType(ex.name),
       sets: [
         { setNumber: 1, weight: 0, reps: 0, rir: undefined },
         { setNumber: 2, weight: 0, reps: 0, rir: undefined },
@@ -58,38 +65,58 @@ export default function WorkoutsPage() {
     setNotes('');
   };
 
-  const updateSet = (exerciseIndex: number, setIndex: number, field: keyof SetData, value: number | undefined) => {
-    const updatedWorkout = [...currentWorkout];
-    updatedWorkout[exerciseIndex].sets[setIndex] = {
-      ...updatedWorkout[exerciseIndex].sets[setIndex],
-      [field]: value,
+  const updateSet = useCallback((exerciseIndex: number, setIndex: number, field: keyof SetData, value: number | undefined) => {
+    setCurrentWorkout((prev) => {
+      const updatedWorkout = [...prev];
+      updatedWorkout[exerciseIndex] = {
+        ...updatedWorkout[exerciseIndex],
+        sets: updatedWorkout[exerciseIndex].sets.map((set, idx) => 
+          idx === setIndex 
+            ? { ...set, [field]: value }
+            : set
+        ),
     };
-    setCurrentWorkout(updatedWorkout);
-  };
+      return updatedWorkout;
+    });
+  }, []);
 
-  const addSet = (exerciseIndex: number) => {
-    const updatedWorkout = [...currentWorkout];
+  const addSet = useCallback((exerciseIndex: number) => {
+    setCurrentWorkout((prev) => {
+      const updatedWorkout = [...prev];
     const newSetNumber = updatedWorkout[exerciseIndex].sets.length + 1;
-    updatedWorkout[exerciseIndex].sets.push({
+      updatedWorkout[exerciseIndex] = {
+        ...updatedWorkout[exerciseIndex],
+        sets: [
+          ...updatedWorkout[exerciseIndex].sets,
+          {
       setNumber: newSetNumber,
       weight: 0,
       reps: 0,
       rir: undefined,
+          },
+        ],
+      };
+      return updatedWorkout;
     });
-    setCurrentWorkout(updatedWorkout);
-  };
+  }, []);
 
-  const removeSet = (exerciseIndex: number, setIndex: number) => {
-    const updatedWorkout = [...currentWorkout];
+  const removeSet = useCallback((exerciseIndex: number, setIndex: number) => {
+    setCurrentWorkout((prev) => {
+      const updatedWorkout = [...prev];
     if (updatedWorkout[exerciseIndex].sets.length > 1) {
-      updatedWorkout[exerciseIndex].sets.splice(setIndex, 1);
-      // Renumerar os sets
-      updatedWorkout[exerciseIndex].sets.forEach((set, idx) => {
-        set.setNumber = idx + 1;
-      });
-      setCurrentWorkout(updatedWorkout);
-    }
-  };
+        updatedWorkout[exerciseIndex] = {
+          ...updatedWorkout[exerciseIndex],
+          sets: updatedWorkout[exerciseIndex].sets
+            .filter((_, idx) => idx !== setIndex)
+            .map((set, idx) => ({
+              ...set,
+              setNumber: idx + 1,
+            })),
+        };
+      }
+      return updatedWorkout;
+    });
+  }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -114,7 +141,19 @@ export default function WorkoutsPage() {
         throw new Error('Erro ao salvar treino');
       }
 
-      alert('Treino salvo com sucesso!');
+      const data = await response.json();
+      
+      // Mostrar notificações de PRs
+      if (data.prsDetected && data.prsDetected.length > 0) {
+        data.prsDetected.forEach((pr: any) => {
+          toast.success(
+            `🏆 NOVO PR! ${pr.exercise}: ${pr.weight}kg x ${pr.reps} reps!`
+          );
+        });
+      }
+
+      toast.success('Treino salvo com sucesso!');
+      
       // Reset form
       setSelectedTemplate('');
       setCurrentWorkout([]);
@@ -122,7 +161,7 @@ export default function WorkoutsPage() {
       setNotes('');
     } catch (error) {
       console.error('Erro:', error);
-      alert('Erro ao salvar treino. Tente novamente.');
+      toast.error('Erro ao salvar treino. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
@@ -135,6 +174,7 @@ export default function WorkoutsPage() {
         ...updatedWorkout[swapExerciseIndex],
         name: newExercise.name,
         muscleGroup: newExercise.muscleGroup,
+        type: newExercise.type || getExerciseType(newExercise.name),
       };
       setCurrentWorkout(updatedWorkout);
     }
@@ -142,113 +182,39 @@ export default function WorkoutsPage() {
     setSwapExerciseIndex(null);
   };
 
-  const WorkoutCard = ({ exercise, index }: { exercise: ExerciseData; index: number }) => (
-    <div className="card-neon mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-1 text-glow" style={{ color: 'var(--accent-primary)' }}>
-            {exercise.name}
-          </h3>
-          <p className="text-sm capitalize" style={{ color: 'var(--text-muted)' }}>
-            {exercise.muscleGroup.replace('_', ' ')}
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setSwapExerciseIndex(index);
-            setSwapModalOpen(true);
-          }}
-          className="ml-4 px-3 py-1 text-sm font-medium transition-all hover:scale-105"
-          style={{
-            color: 'var(--accent-secondary)',
-            border: '1px solid var(--accent-secondary)',
-            borderRadius: 'var(--border-radius)',
-          }}
-          title="Trocar exercício"
-        >
-          🔄
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        <div className="grid grid-cols-5 gap-2 text-xs font-medium mb-2" style={{ color: 'var(--accent-primary)' }}>
-          <div>Série</div>
-          <div>Peso (kg)</div>
-          <div>Reps</div>
-          <div>RIR</div>
-          <div></div>
-        </div>
-
-        {exercise.sets.map((set, setIndex) => (
-          <div key={setIndex} className="grid grid-cols-5 gap-2">
-            <div className="flex items-center text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              {set.setNumber}
-            </div>
-            <input
-              type="number"
-              step="0.5"
-              min="0"
-              placeholder="0"
-              value={set.weight || ''}
-              onChange={(e) => updateSet(index, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-              className="input-neon"
-            />
-            <input
-              type="number"
-              min="0"
-              placeholder="0"
-              value={set.reps || ''}
-              onChange={(e) => updateSet(index, setIndex, 'reps', parseInt(e.target.value) || 0)}
-              className="input-neon"
-            />
-            <input
-              type="number"
-              step="0.5"
-              min="0"
-              max="5"
-              placeholder="0"
-              value={set.rir || ''}
-              onChange={(e) => updateSet(index, setIndex, 'rir', parseFloat(e.target.value) || undefined)}
-              className="input-neon"
-            />
-            <button
-              onClick={() => removeSet(index, setIndex)}
-              className="text-sm transition-all hover:scale-110"
-              style={{ 
-                color: 'var(--accent-warning)',
-                cursor: exercise.sets.length === 1 ? 'not-allowed' : 'pointer',
-                opacity: exercise.sets.length === 1 ? 0.5 : 1
-              }}
-              disabled={exercise.sets.length === 1}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-
-        <button
-          onClick={() => addSet(index)}
-          className="mt-2 text-sm font-medium transition-all hover:scale-105"
-          style={{ color: 'var(--accent-secondary)' }}
-        >
-          + Adicionar série
-        </button>
-      </div>
-    </div>
-  );
+  // WorkoutCard removido - agora é um componente separado em @/components/WorkoutCard.tsx
 
   if (showForm) {
     return (
-      <div className="flex justify-center min-h-screen py-12 px-8">
+      <div 
+        className="flex justify-center min-h-screen py-12 px-8"
+        onScroll={(e) => {
+          // Prevenir scroll acidental
+          e.stopPropagation();
+        }}
+      >
         <div className="w-full max-w-4xl">
         <div className="mb-12 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-glow mb-3" style={{ color: 'var(--accent-primary)' }}>
               {selectedTemplate}
             </h2>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Preencha os dados do seu treino
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Preencha os dados do seu treino
+              </p>
+              {currentWorkout.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg border" style={{ 
+                  background: 'rgba(0, 217, 255, 0.05)', 
+                  borderColor: 'var(--accent-primary)' 
+                }}>
+                  <span className="text-sm" style={{ color: 'var(--text-muted)' }}>⏱️</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                    {formatWorkoutTime(estimateWorkoutTime(currentWorkout).totalMinutes)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleBackToTemplates}
@@ -279,7 +245,16 @@ export default function WorkoutsPage() {
 
         <div className="space-y-8 mb-10">
           {currentWorkout.map((exercise, index) => (
-            <WorkoutCard key={index} exercise={exercise} index={index} />
+            <WorkoutCard
+              key={`exercise-${index}-${exercise.name}`}
+              exercise={exercise}
+              index={index}
+              updateSet={updateSet}
+              addSet={addSet}
+              removeSet={removeSet}
+              setSwapExerciseIndex={setSwapExerciseIndex}
+              setSwapModalOpen={setSwapModalOpen}
+            />
           ))}
         </div>
 

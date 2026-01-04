@@ -9,8 +9,8 @@ export default function SidebarWrapper() {
 
   return (
     <>
+      <Header />
       <Sidebar isOpen={isOpen} onToggle={() => setIsOpen(!isOpen)} />
-      <Header sidebarOpen={isOpen} onToggleSidebar={() => setIsOpen(!isOpen)} />
     </>
   );
 }

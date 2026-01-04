@@ -1,12 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/Toast';
 
 interface Metric {
   id: number;
   date: string;
   weight: number | null;
   waist: number | null;
+  armCircumference: number | null;
+  thighCircumference: number | null;
+  chestCircumference: number | null;
+  bodyFatPercentage: number | null;
   sleep: number | null;
   energy: number | null;
   stress: number | null;
@@ -18,11 +23,16 @@ export default function MetricsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
   
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     weight: '',
     waist: '',
+    armCircumference: '',
+    thighCircumference: '',
+    chestCircumference: '',
+    bodyFatPercentage: '',
     sleep: '',
     energy: '',
     stress: '',
@@ -70,14 +80,19 @@ export default function MetricsPage() {
         date: new Date().toISOString().split('T')[0],
         weight: '',
         waist: '',
+        armCircumference: '',
+        thighCircumference: '',
+        chestCircumference: '',
+        bodyFatPercentage: '',
         sleep: '',
         energy: '',
         stress: '',
         notes: '',
       });
+      toast.success('Métrica salva com sucesso!');
     } catch (error) {
       console.error('Erro:', error);
-      alert('Erro ao salvar métrica. Tente novamente.');
+      toast.error('Erro ao salvar métrica. Tente novamente.');
     } finally {
       setIsSaving(false);
     }
@@ -174,6 +189,62 @@ export default function MetricsPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
+                    Braço (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 35.0"
+                    value={formData.armCircumference}
+                    onChange={(e) => setFormData({ ...formData, armCircumference: e.target.value })}
+                    className="input-neon w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
+                    Coxa (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 58.0"
+                    value={formData.thighCircumference}
+                    onChange={(e) => setFormData({ ...formData, thighCircumference: e.target.value })}
+                    className="input-neon w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
+                    Peito (cm)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 100.0"
+                    value={formData.chestCircumference}
+                    onChange={(e) => setFormData({ ...formData, chestCircumference: e.target.value })}
+                    className="input-neon w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
+                    % Gordura Corporal
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 15.5"
+                    value={formData.bodyFatPercentage}
+                    onChange={(e) => setFormData({ ...formData, bodyFatPercentage: e.target.value })}
+                    className="input-neon w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-3" style={{ color: 'var(--accent-primary)' }}>
                     Sono (horas)
                   </label>
                   <input
@@ -260,7 +331,7 @@ export default function MetricsPage() {
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-                  {metric.weight !== null && (
+                  {metric.weight !== null && metric.weight !== undefined && (
                     <div>
                       <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Peso</div>
                       <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
@@ -269,7 +340,7 @@ export default function MetricsPage() {
                     </div>
                   )}
 
-                  {metric.waist !== null && (
+                  {metric.waist !== null && metric.waist !== undefined && (
                     <div>
                       <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Cintura</div>
                       <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
@@ -278,7 +349,43 @@ export default function MetricsPage() {
                     </div>
                   )}
 
-                  {metric.sleep !== null && (
+                  {metric.armCircumference !== null && metric.armCircumference !== undefined && (
+                    <div>
+                      <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Braço</div>
+                      <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {metric.armCircumference.toFixed(1)} cm
+                      </div>
+                    </div>
+                  )}
+
+                  {metric.thighCircumference !== null && metric.thighCircumference !== undefined && (
+                    <div>
+                      <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Coxa</div>
+                      <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {metric.thighCircumference.toFixed(1)} cm
+                      </div>
+                    </div>
+                  )}
+
+                  {metric.chestCircumference !== null && metric.chestCircumference !== undefined && (
+                    <div>
+                      <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Peito</div>
+                      <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {metric.chestCircumference.toFixed(1)} cm
+                      </div>
+                    </div>
+                  )}
+
+                  {metric.bodyFatPercentage !== null && metric.bodyFatPercentage !== undefined && (
+                    <div>
+                      <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>% Gordura</div>
+                      <div className="text-xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                        {metric.bodyFatPercentage.toFixed(1)}%
+                      </div>
+                    </div>
+                  )}
+
+                  {metric.sleep !== null && metric.sleep !== undefined && (
                     <div>
                       <div className="text-sm mb-2 font-medium" style={{ color: 'var(--text-muted)' }}>Sono</div>
                       <div className="text-xl font-bold" style={{ color: 'var(--accent-secondary)' }}>

@@ -20,29 +20,29 @@ export const workoutPrograms = {
 // Templates individuais (mantendo os PPL originais intactos)
 export const workoutTemplates = {
   // PPL - Push A (mantido original)
-  'Push A': [
-    { name: 'Supino reto barra', muscleGroup: 'chest' },
-    { name: 'Supino inclinado halteres', muscleGroup: 'chest' },
-    { name: 'Desenvolvimento halteres sentado', muscleGroup: 'shoulders' },
-    { name: 'Elevação lateral halteres', muscleGroup: 'side_delts' },
-    { name: 'Tríceps testa barra EZ', muscleGroup: 'triceps' },
-    { name: 'Crunch na máquina', muscleGroup: 'abs' },
-  ],
+    'Push A': [
+      { name: 'Supino reto barra', muscleGroup: 'chest' },
+      { name: 'Supino inclinado halteres', muscleGroup: 'chest' },
+      { name: 'Desenvolvimento halteres sentado', muscleGroup: 'shoulders' },
+      { name: 'Elevação lateral halteres', muscleGroup: 'side_delts' },
+      { name: 'Tríceps testa barra EZ', muscleGroup: 'triceps' },
+      { name: 'Crunch na máquina', muscleGroup: 'abs' },
+    ],
 
   // PPL - Pull A (mantido original)
-  'Pull A': [
-    { name: 'Barra fixa', muscleGroup: 'back' },
-    { name: 'Remada curvada barra', muscleGroup: 'back' },
-    { name: 'Remada baixa máquina', muscleGroup: 'back' },
-    { name: 'Face pull', muscleGroup: 'rear_delts' },
-    { name: 'Rosca direta barra', muscleGroup: 'biceps' },
-    { name: 'Extensão lombar banco romano', muscleGroup: 'lower_back' },
-    { name: 'Prancha', muscleGroup: 'core' },
-  ],
+    'Pull A': [
+      { name: 'Barra fixa', muscleGroup: 'back' },
+      { name: 'Remada curvada barra', muscleGroup: 'back' },
+      { name: 'Remada baixa máquina', muscleGroup: 'back' },
+      { name: 'Face pull', muscleGroup: 'rear_delts' },
+      { name: 'Rosca direta barra', muscleGroup: 'biceps' },
+      { name: 'Extensão lombar banco romano', muscleGroup: 'lower_back' },
+      { name: 'Prancha', muscleGroup: 'core' },
+    ],
 
   // PPL - Legs A (mantido original)
-  'Legs A': [
-    { name: 'Agachamento livre', muscleGroup: 'quads' },
+    'Legs A': [
+      { name: 'Agachamento livre', muscleGroup: 'quads' },
     { name: 'Leg press', muscleGroup: 'quads' },
     { name: 'Cadeira extensora', muscleGroup: 'quads' },
     { name: 'Adutor máquina', muscleGroup: 'adductors' },
@@ -173,3 +173,4 @@ export const workoutTemplates = {
     { name: 'Mountain climber', muscleGroup: 'abs' },
   ],
 } as const;
+  
