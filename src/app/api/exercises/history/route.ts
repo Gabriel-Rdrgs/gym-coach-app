@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     }>;
     
     const sortedWorkoutExercises: WorkoutExerciseWithRelations[] = [...workoutExercises];
-    sortedWorkoutExercises.sort((a, b) => {
+    sortedWorkoutExercises.sort((a: WorkoutExerciseWithRelations, b: WorkoutExerciseWithRelations) => {
       return b.workout.date.getTime() - a.workout.date.getTime();
     });
     
