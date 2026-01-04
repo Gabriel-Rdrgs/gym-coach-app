@@ -2,6 +2,9 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+// Forçar renderização dinâmica (não pré-renderizar durante build)
+export const dynamic = 'force-dynamic';
+
 interface WorkoutPageProps {
   params: Promise<{ id: string }>;
 }

@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 
+// Forçar renderização dinâmica (não pré-renderizar durante build)
+export const dynamic = 'force-dynamic';
+
 async function getStats() {
   const now = new Date();
   const startOfWeek = new Date(now);
