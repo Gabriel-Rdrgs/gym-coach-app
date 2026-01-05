@@ -220,9 +220,6 @@ export default async function Home() {
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
       <div className="max-w-7xl mx-auto py-12">
         {/* Page Title */}
-        {/* Treino do Dia */}
-        <TodayWorkout />
-
         <div className="text-center mb-16">
           <h1 
             className="text-5xl font-bold mb-4 text-glow"
