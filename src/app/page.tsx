@@ -1,130 +1,126 @@
-import Link from 'next/link';
-import { prisma } from '@/lib/prisma';
-import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
-import TodayWorkout from '@/components/TodayWorkout';
+import Link from 'next/link'
+import { prisma } from '@/lib/prisma'
+import { calculateValidSetsForWorkout } from '@/lib/progress-utils'
+import TodayWorkout from '@/components/TodayWorkout'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 
-// Forçar renderização dinâmica (não pré-renderizar durante build)
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
+// FUNÇÃO AUXILIAR (sem export)
 async function getStats() {
   try {
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay()); // Domingo da semana atual
-    startOfWeek.setHours(0, 0, 0, 0);
-    
-    const startOfLastWeek = new Date(startOfWeek);
-    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-    
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    const startOfLastWeek = new Date(startOfWeek)
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7)
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
     const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts, allWorkouts, allMetrics] = await Promise.all([
-    prisma.workout.findMany({
-      take: 5,
-      orderBy: { date: 'desc' },
-      include: {
-        exercises: {
-          include: {
-            exercise: true,
-            sets: true,
+      prisma.workout.findMany({
+        take: 5,
+        orderBy: { date: 'desc' },
+        include: {
+          exercises: {
+            include: { exercise: true, sets: true },
           },
         },
-      },
-    }),
-    prisma.metric.findMany({
-      take: 1,
-      orderBy: { date: 'desc' },
-    }),
-    prisma.exercise.count(),
-    prisma.workout.count(),
-    prisma.workout.findMany({
-      include: {
-        exercises: {
-          include: {
-            exercise: true,
-            sets: true,
+      }),
+      prisma.metric.findMany({
+        take: 1,
+        orderBy: { date: 'desc' },
+      }),
+      prisma.exercise.count(),
+      prisma.workout.count(),
+      prisma.workout.findMany({
+        include: {
+          exercises: {
+            include: { exercise: true, sets: true },
           },
         },
-      },
-      orderBy: { date: 'desc' },
-    }),
-    prisma.metric.findMany({
-      orderBy: { date: 'desc' },
-    }),
-  ]);
+        orderBy: { date: 'desc' },
+      }),
+      prisma.metric.findMany({
+        orderBy: { date: 'desc' },
+      }),
+    ])
 
-  const latestMetric = recentMetrics[0] || null;
-  const totalMetrics = await prisma.metric.count();
+    const latestMetric = recentMetrics[0] || null
+    const totalMetrics = await prisma.metric.count()
 
-  // Calcular estatísticas da semana atual
-  const thisWeekWorkouts = allWorkouts.filter(w => new Date(w.date) >= startOfWeek);
-  const lastWeekWorkouts = allWorkouts.filter(w => {
-    const workoutDate = new Date(w.date);
-    return workoutDate >= startOfLastWeek && workoutDate < startOfWeek;
-  });
+    const thisWeekWorkouts = allWorkouts.filter(w => new Date(w.date) >= startOfWeek)
+    const lastWeekWorkouts = allWorkouts.filter(w => {
+      const workoutDate = new Date(w.date)
+      return workoutDate >= startOfLastWeek && workoutDate < startOfWeek
+    })
 
-  // Calcular séries válidas
-  const calculateWeekValidSets = (workouts: any[]) => {
-    return workouts.reduce((sum, workout) => {
-      const workoutFormatted = {
-        date: workout.date,
-        exercises: workout.exercises.map((ex: any) => ({
-          exercise: {
-            muscleGroup: ex.exercise?.muscleGroup || '',
-            name: ex.exercise?.name || '',
-            type: ex.exercise?.type || 'isolation',
-          },
-          sets: ex.sets.map((set: any) => ({
-            rir: set.rir,
-            weight: set.weight,
-            reps: set.reps,
+    const calculateWeekValidSets = (workouts: any[]) => {
+      return workouts.reduce((sum, workout) => {
+        const workoutFormatted = {
+          date: workout.date,
+          exercises: workout.exercises.map((ex: any) => ({
+            exercise: {
+              muscleGroup: ex.exercise?.muscleGroup || '',
+              name: ex.exercise?.name || '',
+              type: ex.exercise?.type || 'isolation',
+            },
+            sets: ex.sets.map((set: any) => ({
+              rir: set.rir,
+              weight: set.weight,
+              reps: set.reps,
+            })),
           })),
-        })),
-      };
-      const result = calculateValidSetsForWorkout(workoutFormatted);
-      return sum + result.totalValidSets;
-    }, 0);
-  };
+        }
+        const result = calculateValidSetsForWorkout(workoutFormatted)
+        return sum + result.totalValidSets
+      }, 0)
+    }
 
-  const thisWeekValidSets = calculateWeekValidSets(thisWeekWorkouts);
-  const lastWeekValidSets = calculateWeekValidSets(lastWeekWorkouts);
+    const thisWeekValidSets = calculateWeekValidSets(thisWeekWorkouts)
+    const lastWeekValidSets = calculateWeekValidSets(lastWeekWorkouts)
 
-  // Calcular média semanal de treinos (últimas 4 semanas)
-  const fourWeeksAgo = new Date(startOfWeek);
-  fourWeeksAgo.setDate(startOfWeek.getDate() - 28);
-  const recentWorkoutsForAvg = allWorkouts.filter(w => new Date(w.date) >= fourWeeksAgo);
-  const weeklyCounts: { [key: string]: number } = {};
-  recentWorkoutsForAvg.forEach(workout => {
-    const workoutDate = new Date(workout.date);
-    const weekStart = new Date(workoutDate);
-    weekStart.setDate(workoutDate.getDate() - workoutDate.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    const weekKey = weekStart.toISOString().split('T')[0];
-    weeklyCounts[weekKey] = (weeklyCounts[weekKey] || 0) + 1;
-  });
-  const avgWeeklyWorkouts = Object.keys(weeklyCounts).length > 0
-    ? Object.values(weeklyCounts).reduce((a, b) => a + b, 0) / Object.keys(weeklyCounts).length
-    : 0;
+    const fourWeeksAgo = new Date(startOfWeek)
+    fourWeeksAgo.setDate(startOfWeek.getDate() - 28)
+    const recentWorkoutsForAvg = allWorkouts.filter(w => new Date(w.date) >= fourWeeksAgo)
 
-  // Calcular tendência de peso
-  const thisMonthMetrics = allMetrics.filter(m => new Date(m.date) >= startOfMonth);
-  const lastMonthMetrics = allMetrics.filter(m => {
-    const metricDate = new Date(m.date);
-    return metricDate >= startOfLastMonth && metricDate <= endOfLastMonth;
-  });
-  
-  const thisMonthAvgWeight = thisMonthMetrics.length > 0 && thisMonthMetrics[0].weight
-    ? thisMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / thisMonthMetrics.filter(m => m.weight).length
-    : null;
-  const lastMonthAvgWeight = lastMonthMetrics.length > 0 && lastMonthMetrics[0].weight
-    ? lastMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / lastMonthMetrics.filter(m => m.weight).length
-    : null;
+    const weeklyCounts: { [key: string]: number } = {}
+    recentWorkoutsForAvg.forEach(workout => {
+      const workoutDate = new Date(workout.date)
+      const weekStart = new Date(workoutDate)
+      weekStart.setDate(workoutDate.getDate() - workoutDate.getDay())
+      weekStart.setHours(0, 0, 0, 0)
+      const weekKey = weekStart.toISOString().split('T')[0]
+      weeklyCounts[weekKey] = (weeklyCounts[weekKey] || 0) + 1
+    })
 
-  const weightTrend = thisMonthAvgWeight && lastMonthAvgWeight
-    ? thisMonthAvgWeight - lastMonthAvgWeight
-    : null;
+    const avgWeeklyWorkouts = Object.keys(weeklyCounts).length > 0
+      ? Object.values(weeklyCounts).reduce((a, b) => a + b, 0) / Object.keys(weeklyCounts).length
+      : 0
+
+    const thisMonthMetrics = allMetrics.filter(m => new Date(m.date) >= startOfMonth)
+    const lastMonthMetrics = allMetrics.filter(m => {
+      const metricDate = new Date(m.date)
+      return metricDate >= startOfLastMonth && metricDate <= endOfLastMonth
+    })
+
+    const thisMonthAvgWeight = thisMonthMetrics.length > 0 && thisMonthMetrics[0].weight
+      ? thisMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / thisMonthMetrics.filter(m => m.weight).length
+      : null
+
+    const lastMonthAvgWeight = lastMonthMetrics.length > 0 && lastMonthMetrics[0].weight
+      ? lastMonthMetrics.reduce((sum, m) => sum + (m.weight || 0), 0) / lastMonthMetrics.filter(m => m.weight).length
+      : null
+
+    const weightTrend = thisMonthAvgWeight && lastMonthAvgWeight
+      ? thisMonthAvgWeight - lastMonthAvgWeight
+      : null
 
     return {
       recentWorkouts,
@@ -132,7 +128,6 @@ async function getStats() {
       totalExercises,
       totalWorkouts,
       totalMetrics,
-      // Estatísticas avançadas
       thisWeekWorkouts: thisWeekWorkouts.length,
       lastWeekWorkouts: lastWeekWorkouts.length,
       thisWeekValidSets,
@@ -140,10 +135,9 @@ async function getStats() {
       avgWeeklyWorkouts,
       weightTrend,
       thisMonthAvgWeight,
-    };
+    }
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
-    // Retornar valores padrão em caso de erro
+    console.error('Erro ao buscar estatísticas:', error)
     return {
       recentWorkouts: [],
       latestMetric: null,
@@ -157,9 +151,9 @@ async function getStats() {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
-    };
+    }
   }
-}
+} // ✅ FECHAMENTO DA FUNÇÃO
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -168,11 +162,10 @@ const formatDate = (date: Date) => {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
-};
+  }).format(date)
+}
 
 const calculateValidSets = (workout: any) => {
-  // Converter o workout para o formato esperado pela função
   const workoutFormatted = {
     date: workout.date,
     exercises: workout.exercises.map((ex: any) => ({
@@ -187,19 +180,23 @@ const calculateValidSets = (workout: any) => {
         reps: set.reps,
       })),
     })),
-  };
-  
-  const result = calculateValidSetsForWorkout(workoutFormatted);
-  return result.totalValidSets;
-};
+  }
+  const result = calculateValidSetsForWorkout(workoutFormatted)
+  return result.totalValidSets
+}
 
 export default async function Home() {
-  let stats;
+  // ✅ VERIFICAÇÃO DE AUTENTICAÇÃO
+  const session = await getServerSession(authOptions)
+  if (!session) {
+    redirect('/login')
+  }
+
+  let stats
   try {
-    stats = await getStats();
+    stats = await getStats()
   } catch (error) {
-    console.error('Erro ao carregar página inicial:', error);
-    // Usar valores padrão em caso de erro
+    console.error('Erro ao carregar página inicial:', error)
     stats = {
       recentWorkouts: [],
       latestMetric: null,
@@ -213,9 +210,9 @@ export default async function Home() {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
-    };
+    }
   }
-
+  
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
       <div className="max-w-7xl mx-auto py-12">

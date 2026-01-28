@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import ExerciseModal from '@/components/ExerciseModal';
 
+
 interface Exercise {
   id: number;
   name: string;

@@ -7,22 +7,22 @@ datasource db {
 }
 
 model Exercise {
-  id               Int                   @id @default(autoincrement())
-  name             String                @unique
-  muscleGroup      String
-  type             String
-  notes            String?
-  imageUrl         String? // URL para GIF ou imagem do exercício
-  videoUrl         String? // URL para vídeo tutorial (opcional)
-  equipment        String? // Equipamento necessário (barra, halteres, máquina, etc)
-  difficulty       String? // Nível de dificuldade (iniciante, intermediário, avançado)
-  workoutExercises WorkoutExercise[]
-  alternatives     ExerciseAlternative[] @relation("AlternativeExercises")
-  mainExercise     ExerciseAlternative[] @relation("MainExercise")
-  personalRecords  PersonalRecord[]
-  exercisePreferences ExercisePreference[]
+  id                    Int                    @id @default(autoincrement())
+  name                  String                 @unique
+  muscleGroup           String
+  type                  String
+  notes                 String?
+  difficulty            String?
+  equipment             String?
+  imageUrl              String?
+  videoUrl              String?
+  alternatives          ExerciseAlternative[]  @relation("AlternativeExercises")
+  mainExercise          ExerciseAlternative[]  @relation("MainExercise")
+  exercisePreferences   ExercisePreference[]
   originalSubstitutions ExerciseSubstitution[] @relation("OriginalExercise")
-  substitutedExercises ExerciseSubstitution[] @relation("SubstitutedExercise")
+  substitutedExercises  ExerciseSubstitution[] @relation("SubstitutedExercise")
+  personalRecords       PersonalRecord[]
+  workoutExercises      WorkoutExercise[]
 }
 
 model Workout {
@@ -30,31 +30,34 @@ model Workout {
   date              DateTime           @default(now())
   template          String
   notes             String?
-  exercises         WorkoutExercise[]
   scheduledWorkouts ScheduledWorkout[] @relation("WorkoutScheduledWorkouts")
+  exercises         WorkoutExercise[]
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+
 }
 
 model WorkoutExercise {
-  id         Int     @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   workoutId  Int
   exerciseId Int
   order      Int
   notes      String?
-
-  workout  Workout  @relation(fields: [workoutId], references: [id])
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
-  sets     Set[]
+  sets       Set[]
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  workout    Workout  @relation(fields: [workoutId], references: [id])
 }
 
 model Set {
-  id                Int    @id @default(autoincrement())
+  id                Int             @id @default(autoincrement())
   workoutExerciseId Int
   setNumber         Int
   weight            Float
   reps              Int
   rir               Float?
-
-  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
 }
 
 model Metric {
@@ -62,148 +65,148 @@ model Metric {
   date               DateTime @default(now())
   weight             Float?
   waist              Float?
-  armCircumference   Float? // Circunferência do braço (cm)
-  thighCircumference Float? // Circunferência da coxa (cm)
-  chestCircumference Float? // Circunferência do peito (cm)
-  bodyFatPercentage  Float? // Percentual de gordura corporal (%)
   sleep              Float?
   energy             Int?
   stress             Int?
   notes              String?
+  armCircumference   Float?
+  bodyFatPercentage  Float?
+  chestCircumference Float?
+  thighCircumference Float?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
 }
 
-// Tabela para relacionar exercícios alternativos/similares
 model ExerciseAlternative {
-  id             Int   @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   mainExerciseId Int
   alternativeId  Int
-  similarity     Float @default(1.0) // Score de similaridade (0-1)
-
-  mainExercise Exercise @relation("MainExercise", fields: [mainExerciseId], references: [id], onDelete: Cascade)
-  alternative  Exercise @relation("AlternativeExercises", fields: [alternativeId], references: [id], onDelete: Cascade)
+  similarity     Float    @default(1.0)
+  alternative    Exercise @relation("AlternativeExercises", fields: [alternativeId], references: [id], onDelete: Cascade)
+  mainExercise   Exercise @relation("MainExercise", fields: [mainExerciseId], references: [id], onDelete: Cascade)
 
   @@unique([mainExerciseId, alternativeId])
   @@index([mainExerciseId])
 }
 
-// Tabela para armazenar PRs (Personal Records)
 model PersonalRecord {
   id         Int      @id @default(autoincrement())
   exerciseId Int
   weight     Float
   reps       Int
   date       DateTime @default(now())
-  workoutId  Int? // Referência ao treino onde o PR foi alcançado
-
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
-
+  workoutId  Int?
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
   @@index([exerciseId])
   @@index([date])
 }
 
-// Modelo para Programas de Treino Personalizados
 model WorkoutProgram {
-  id          Int       @id @default(autoincrement())
-  name        String // Nome do programa (ex: "Hipertrofia 4x/semana")
-  description String? // Descrição do programa
-  isActive    Boolean   @default(true) // Se o programa está ativo
-  startDate   DateTime  @default(now()) // Data de início do programa
-  endDate     DateTime? // Data de término (opcional)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Objetivos e preferências
-  objectives  Json? // ["hipertrofia", "força", "resistência", "perda_gordura", "ganho_massa"]
-  preferences Json? // { "favoriteExercises": [1, 2, 3], "avoidedExercises": [4, 5] }
-  equipmentAvailable Json? // ["barra", "halteres", "máquina", "cabo", "peso_livre"]
-  trainingDaysPerWeek Int? // Quantos dias por semana (ex: 3, 4, 5, 6)
-  focusMuscleGroups Json? // Grupos musculares prioritários
-
-  // Relação com os treinos do programa
-  scheduledWorkouts ScheduledWorkout[]
-
-  // Relação com semanas do programa (para acompanhamento)
-  weeks ProgramWeek[]
-
-  // Relação com preferências de exercícios
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  description         String?
+  isActive            Boolean              @default(true)
+  startDate           DateTime             @default(now())
+  endDate             DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  equipmentAvailable  Json?
+  focusMuscleGroups   Json?
+  objectives          Json?
+  preferences         Json?
+  trainingDaysPerWeek Int?
   exercisePreferences ExercisePreference[]
+  weeks               ProgramWeek[]
+  scheduledWorkouts   ScheduledWorkout[]
 }
 
-// Modelo para Treinos Agendados no Programa
 model ScheduledWorkout {
-  id          Int       @id @default(autoincrement())
-  programId   Int
-  template    String // Nome do template (ex: "Push A")
-  dayOfWeek   Int // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
-  weekNumber  Int // Semana do programa (1, 2, 3, ...)
-  order       Int // Ordem do treino no dia (se houver múltiplos)
-  isCompleted Boolean   @default(false)
-  completedAt DateTime?
-  workoutId   Int? // Referência ao treino realizado (se completado)
-
-  program WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-  workout Workout?       @relation("WorkoutScheduledWorkouts", fields: [workoutId], references: [id], onDelete: SetNull)
-
-  // Exercícios personalizados para este treino agendado (substituições)
+  id                    Int                    @id @default(autoincrement())
+  programId             Int
+  template              String
+  dayOfWeek             Int
+  weekNumber            Int
+  order                 Int
+  isCompleted           Boolean                @default(false)
+  completedAt           DateTime?
+  workoutId             Int?
   exerciseSubstitutions ExerciseSubstitution[]
+  program               WorkoutProgram         @relation(fields: [programId], references: [id], onDelete: Cascade)
+  workout               Workout?               @relation("WorkoutScheduledWorkouts", fields: [workoutId], references: [id])
 
   @@index([programId])
   @@index([dayOfWeek])
   @@index([weekNumber])
 }
 
-// Modelo para Acompanhamento Semanal (Séries Válidas por Grupo Muscular)
 model ProgramWeek {
-  id         Int      @id @default(autoincrement())
-  programId  Int
-  weekNumber Int // Número da semana (1, 2, 3, ...)
-  startDate  DateTime // Data de início da semana
-  endDate    DateTime // Data de fim da semana
-
-  // Séries válidas por grupo muscular nesta semana
-  validSetsByGroup Json // { "chest": 12.5, "back": 15.0, ... }
-
-  // Status OMS (10-20 séries válidas por grupo)
-  omsStatus Json // { "chest": "optimal", "back": "low", ... }
-
-  program WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  id               Int            @id @default(autoincrement())
+  programId        Int
+  weekNumber       Int
+  startDate        DateTime
+  endDate          DateTime
+  validSetsByGroup Json
+  omsStatus        Json
+  program          WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@unique([programId, weekNumber])
   @@index([programId])
   @@index([startDate])
 }
 
-// Modelo para Preferências de Exercícios por Programa
 model ExercisePreference {
-  id          Int   @id @default(autoincrement())
-  programId   Int
-  exerciseId  Int
-  preference  String // "favorite" | "avoid" | "neutral"
-  reason      String? // Motivo da preferência (opcional)
-  createdAt   DateTime @default(now())
-
-  program  WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
-  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  id         Int            @id @default(autoincrement())
+  programId  Int
+  exerciseId Int
+  preference String
+  reason     String?
+  createdAt  DateTime       @default(now())
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  program    WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
 
   @@unique([programId, exerciseId])
   @@index([programId])
   @@index([exerciseId])
 }
 
-// Modelo para Substituições de Exercícios em Treinos Agendados
 model ExerciseSubstitution {
-  id                Int   @id @default(autoincrement())
-  scheduledWorkoutId Int
-  originalExerciseId Int  // Exercício original do template
-  substitutedExerciseId Int // Exercício substituído (personalizado)
-  reason            String? // Motivo da substituição
-  createdAt         DateTime @default(now())
-
-  scheduledWorkout ScheduledWorkout @relation(fields: [scheduledWorkoutId], references: [id], onDelete: Cascade)
-  originalExercise Exercise @relation("OriginalExercise", fields: [originalExerciseId], references: [id], onDelete: Cascade)
-  substitutedExercise Exercise @relation("SubstitutedExercise", fields: [substitutedExerciseId], references: [id], onDelete: Cascade)
+  id                    Int              @id @default(autoincrement())
+  scheduledWorkoutId    Int
+  originalExerciseId    Int
+  substitutedExerciseId Int
+  reason                String?
+  createdAt             DateTime         @default(now())
+  originalExercise      Exercise         @relation("OriginalExercise", fields: [originalExerciseId], references: [id], onDelete: Cascade)
+  scheduledWorkout      ScheduledWorkout @relation(fields: [scheduledWorkoutId], references: [id], onDelete: Cascade)
+  substitutedExercise   Exercise         @relation("SubstitutedExercise", fields: [substitutedExerciseId], references: [id], onDelete: Cascade)
 
   @@index([scheduledWorkoutId])
   @@index([originalExerciseId])
   @@index([substitutedExerciseId])
+}
+// Adicione isso no schema.prisma
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relações com seus dados
+  workouts      Workout[]
+  metrics       Metric[]
+  personalRecords PersonalRecord[]
+  
+  @@map("users")
 }
