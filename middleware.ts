@@ -1,14 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
+// src/middleware.ts
+export { auth as middleware } from "@/lib/auth";
 
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get('next-auth.session-token') ||
-    request.cookies.get('__Secure-next-auth.session-token')
-
-  if (!token && request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  return NextResponse.next()
-}
-
-export const config = { matcher: ['/'] }
+export const config = {
+  matcher: [
+    /*
+     * Proteger todas as rotas EXCETO:
+     * - /login (página de login)
+     * - /signup (página de cadastro)
+     * - /api/auth/* (rotas de autenticação)
+     * - /_next/static (arquivos estáticos do Next.js)
+     * - /_next/image (otimização de imagens)
+     * - /favicon.ico (ícone do site)
+     */
+    "/((?!login|signup|api/auth|_next/static|_next/image|favicon.ico).*)",
+  ],
+};

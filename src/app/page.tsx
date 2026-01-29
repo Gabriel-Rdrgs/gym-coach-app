@@ -2,14 +2,13 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { calculateValidSetsForWorkout } from '@/lib/progress-utils'
 import TodayWorkout from '@/components/TodayWorkout'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-// FUNÇÃO AUXILIAR (sem export)
-async function getStats() {
+// FUNÇÃO AUXILIAR - ✅ MUDANÇA 1: Adicionar parâmetro userId
+async function getStats(userId: string) {
   try {
     const now = new Date()
     const startOfWeek = new Date(now)
@@ -23,8 +22,10 @@ async function getStats() {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
+    // ✅ MUDANÇA 2: Adicionar where: { userId } em todas as queries
     const [recentWorkouts, recentMetrics, totalExercises, totalWorkouts, allWorkouts, allMetrics] = await Promise.all([
       prisma.workout.findMany({
+        where: { userId }, // 🔑 FILTRO CRÍTICO
         take: 5,
         orderBy: { date: 'desc' },
         include: {
@@ -34,12 +35,16 @@ async function getStats() {
         },
       }),
       prisma.metric.findMany({
+        where: { userId }, // 🔑 FILTRO CRÍTICO
         take: 1,
         orderBy: { date: 'desc' },
       }),
       prisma.exercise.count(),
-      prisma.workout.count(),
+      prisma.workout.count({
+        where: { userId }, // 🔑 FILTRO CRÍTICO
+      }),
       prisma.workout.findMany({
+        where: { userId }, // 🔑 FILTRO CRÍTICO
         include: {
           exercises: {
             include: { exercise: true, sets: true },
@@ -48,12 +53,15 @@ async function getStats() {
         orderBy: { date: 'desc' },
       }),
       prisma.metric.findMany({
+        where: { userId }, // 🔑 FILTRO CRÍTICO
         orderBy: { date: 'desc' },
       }),
     ])
 
     const latestMetric = recentMetrics[0] || null
-    const totalMetrics = await prisma.metric.count()
+    const totalMetrics = await prisma.metric.count({
+      where: { userId }, // 🔑 FILTRO CRÍTICO
+    })
 
     const thisWeekWorkouts = allWorkouts.filter(w => new Date(w.date) >= startOfWeek)
     const lastWeekWorkouts = allWorkouts.filter(w => {
@@ -153,7 +161,7 @@ async function getStats() {
       thisMonthAvgWeight: null,
     }
   }
-} // ✅ FECHAMENTO DA FUNÇÃO
+}
 
 const formatDate = (date: Date) => {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -186,15 +194,15 @@ const calculateValidSets = (workout: any) => {
 }
 
 export default async function Home() {
-  // ✅ VERIFICAÇÃO DE AUTENTICAÇÃO
-  const session = await getServerSession(authOptions)
-  if (!session) {
+  // ✅ MUDANÇA 3: Verificar session.user.id e passar para getStats
+  const session = await auth()
+  if (!session?.user?.id) {
     redirect('/login')
   }
 
   let stats
   try {
-    stats = await getStats()
+    stats = await getStats(session.user.id) // ✅ PASSAR userId
   } catch (error) {
     console.error('Erro ao carregar página inicial:', error)
     stats = {
@@ -212,7 +220,6 @@ export default async function Home() {
       thisMonthAvgWeight: null,
     }
   }
-  
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
       <div className="max-w-7xl mx-auto py-12">

@@ -1,39 +1,75 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import Credentials from "next-auth/providers/credentials"
+// src/lib/auth.ts
+import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
-import { prisma } from "@/lib/prisma"
-import { NextAuthOptions } from "next-auth"
+import Credentials from "next-auth/providers/credentials"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "./prisma"
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    // ✅ TESTE RÁPIDO
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
     Credentials({
-      name: "Gym Coach (Demo)",
+      id: 'credentials',
+      name: 'credentials',
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Senha", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (credentials?.email === "gabriel@gymcoach.com" && credentials?.password === "123456") {
-          return { 
-            id: "gabriel123", 
-            name: "Gabriel Rodrigues", 
-            email: "gabriel@gymcoach.com" 
+        console.log('🔐 Tentando login com:', credentials?.email) // Debug
+        
+        if (
+          credentials?.email === "gabriel@gymcoach.com" &&
+          credentials?.password === "123456"
+        ) {
+          const user = await prisma.user.findUnique({
+            where: { email: "gabriel@gymcoach.com" }
+          })
+          
+          if (user) {
+            console.log('✅ Usuário encontrado:', user.id) // Debug
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+            }
           }
         }
-        throw new Error("Email ou senha inválidos")
-      }
+        
+        console.log('❌ Credenciais inválidas') // Debug
+        return null
+      },
     }),
-    
-    // ✅ GOOGLE (quando configurar)
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? ""
-    })
   ],
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" }
-}
-
-export default authOptions
+  pages: {
+    signIn: '/login',
+  },
+  session: {
+    strategy: "jwt", // ✅ IMPORTANTE: JWT para Credentials
+  },
+  callbacks: {
+    async session({ session, token, user }) {
+      // Para Google OAuth (usa adapter)
+      if (user) {
+        session.user.id = user.id
+      }
+      // Para Credentials (usa JWT)
+      else if (token?.sub) {
+        session.user.id = token.sub
+      }
+      return session
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id
+      }
+      return token
+    },
+  },
+  debug: true, // ✅ Ativar debug temporariamente
+})
