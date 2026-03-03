@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const body = await request.json();
     const {
       date,
@@ -20,6 +32,7 @@ export async function POST(request: NextRequest) {
 
     const metric = await prisma.metric.create({
       data: {
+        userId,
         date: date ? new Date(date) : new Date(),
         weight: weight ? parseFloat(weight) : null,
         waist: waist ? parseFloat(waist) : null,
@@ -46,7 +59,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const metrics = await prisma.metric.findMany({
+      where: { userId },
       orderBy: { date: 'desc' },
     });
 

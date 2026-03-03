@@ -3,6 +3,7 @@ import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import SidebarWrapper from "@/components/SidebarWrapper";
 import ToastContainer from "@/components/Toast";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper"; // ← novo import
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,16 +45,18 @@ export default function RootLayout({
           fontFamily: "var(--font-inter), sans-serif",
         }}
       >
-        <SidebarWrapper />
-        <ToastContainer />
-        <main 
-          className="min-h-screen transition-all duration-300 sidebar-open"
-          style={{
-            paddingTop: '80px', // Espaço para o header fixo
-          }}
-      >
-        {children}
-        </main>
+        <SessionProviderWrapper>
+          <SidebarWrapper />
+          <ToastContainer />
+          <main 
+            className="min-h-screen transition-all duration-300 sidebar-open"
+            style={{
+              paddingTop: '80px',
+            }}
+          >
+            {children}
+          </main>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

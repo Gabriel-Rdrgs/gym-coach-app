@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { checkAndSavePR } from '@/lib/exercise-utils';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const body = await request.json();
     const { template, notes, exercises } = body;
 
@@ -17,6 +29,7 @@ export async function POST(request: NextRequest) {
     // Criar o treino com todos os exercícios e séries
     const workout = await prisma.workout.create({
       data: {
+        userId,
         template,
         notes: notes || null,
         exercises: {
@@ -76,7 +89,8 @@ export async function POST(request: NextRequest) {
             exercise.id,
             maxWeightSet.weight,
             maxWeightSet.reps,
-            workout.id
+            workout.id,
+            userId
           );
 
           if (prResult?.isPR) {
@@ -105,7 +119,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const workouts = await prisma.workout.findMany({
+      where: { userId },
       orderBy: { date: 'desc' },
       include: {
         exercises: {
@@ -129,4 +155,5 @@ export async function GET() {
     );
   }
 }
+
 

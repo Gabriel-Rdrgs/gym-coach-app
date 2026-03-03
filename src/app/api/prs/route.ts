@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const { searchParams } = new URL(request.url);
     const exerciseId = searchParams.get('exerciseId');
 
-    const where: any = {};
+    const where: any = { userId };
     if (exerciseId) {
       where.exerciseId = parseInt(exerciseId);
     }
@@ -53,6 +65,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
     const body = await request.json();
     const { exerciseId, weight, reps, workoutId } = body;
 
@@ -65,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar se é um PR
     const existingPRs = await prisma.personalRecord.findMany({
-      where: { exerciseId },
+      where: { exerciseId, userId },
       orderBy: { weight: 'desc' },
     });
 
@@ -78,6 +101,7 @@ export async function POST(request: NextRequest) {
           weight,
           reps,
           workoutId: workoutId || null,
+          userId,
         },
         include: {
           exercise: true,

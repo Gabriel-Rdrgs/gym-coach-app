@@ -74,17 +74,19 @@ export async function suggestExercises(
 
 /**
  * Verifica se um PR foi batido e salva se for
+ * Agora sempre associa o PR ao usuário correto (userId obrigatório no schema).
  */
 export async function checkAndSavePR(
   exerciseId: number,
   weight: number,
   reps: number,
-  workoutId?: number
+  workoutId: number | undefined,
+  userId: string
 ) {
   try {
-    // Buscar o melhor PR atual para este exercício
+    // Buscar o melhor PR atual para este exercício do próprio usuário
     const existingPRs = await prisma.personalRecord.findMany({
-      where: { exerciseId },
+      where: { exerciseId, userId },
       orderBy: { weight: 'desc' },
       take: 1,
     });
@@ -93,13 +95,14 @@ export async function checkAndSavePR(
     const isPR = !currentBestPR || weight > currentBestPR.weight;
 
     if (isPR) {
-      // Salvar novo PR
+      // Salvar novo PR vinculado ao usuário
       const newPR = await prisma.personalRecord.create({
         data: {
           exerciseId,
           weight,
           reps,
           workoutId: workoutId || null,
+          userId,
         },
         include: {
           exercise: true,
@@ -123,4 +126,5 @@ export async function checkAndSavePR(
     return null;
   }
 }
+
 
