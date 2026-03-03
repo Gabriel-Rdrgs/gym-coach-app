@@ -5,6 +5,8 @@ import "dotenv/config";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pool: Pool | undefined;
+  adapter: InstanceType<typeof PrismaPg> | undefined;
 };
 
 // Validar DATABASE_URL
@@ -16,37 +18,35 @@ if (!process.env.DATABASE_URL) {
 
 const connectionString = process.env.DATABASE_URL!;
 const isSupabase = connectionString.includes("supabase");
-// Supabase: mais tempo para estabelecer conexão e SSL
-const supabaseUrl =
-  connectionString +
-  (connectionString.includes("?") ? "&" : "?") +
-  "connect_timeout=30";
 
-// Supabase: adapter com PoolConfig — pool criado sob demanda pelo adapter (pode reduzir P1017).
-// Outros: Pool explícito.
-const adapter = isSupabase
-  ? new PrismaPg({
-      connectionString: supabaseUrl,
-      connectionTimeoutMillis: 30000,
-      max: 1,
-      idleTimeoutMillis: 0,
-      ssl: { rejectUnauthorized: false },
-    })
-  : new PrismaPg(
-      new Pool({
-        connectionString,
-        connectionTimeoutMillis: 15000,
-        idleTimeoutMillis: 30000,
-        keepAlive: true,
-        max: 10,
-      })
-    );
+function createPool(): Pool {
+  if (globalForPrisma.pool) return globalForPrisma.pool;
+  const pool = new Pool({
+    connectionString: isSupabase
+      ? connectionString + (connectionString.includes("?") ? "&" : "?") + "connect_timeout=30"
+      : connectionString,
+    connectionTimeoutMillis: 20000,
+    idleTimeoutMillis: 60000,
+    keepAlive: true,
+    max: 5,
+    ...(isSupabase && { ssl: { rejectUnauthorized: false } }),
+  });
+  if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
+  return pool;
+}
+
+function createAdapter(): InstanceType<typeof PrismaPg> {
+  if (globalForPrisma.adapter) return globalForPrisma.adapter;
+  const adapter = new PrismaPg(createPool());
+  if (process.env.NODE_ENV !== "production") globalForPrisma.adapter = adapter;
+  return adapter;
+}
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    adapter: createAdapter(),
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
