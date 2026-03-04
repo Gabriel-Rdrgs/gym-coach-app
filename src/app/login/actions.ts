@@ -10,8 +10,6 @@ export async function handleDemoLogin() {
     console.log('🚀 Iniciando login demo...') // Debug
 
     await signIn('credentials', {
-      email: 'gabriel@gymcoach.com',
-      password: '123456',
       redirectTo: '/',
     })
 
