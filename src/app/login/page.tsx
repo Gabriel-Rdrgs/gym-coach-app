@@ -39,7 +39,7 @@ export default function LoginPage() {
           </div>
 
           {/* Demo Login */}
-          <form action={async () => { await handleDemoLogin(); }}>
+          <form action={handleDemoLogin}>
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium"
