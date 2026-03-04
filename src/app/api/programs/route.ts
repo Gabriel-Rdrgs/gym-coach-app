@@ -13,8 +13,8 @@ export async function GET() {
 
     const programs = await prisma.workoutProgram.findMany({
       where: userId
-        ? { OR: [{ userId: null }, { userId }] }
-        : { userId: null },
+        ? { OR: [{ userId: { equals: null } }, { userId: { equals: userId } }] }
+        : { userId: { equals: null } },
       include: {
         scheduledWorkouts: {
           orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }, { order: 'asc' }],

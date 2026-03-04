@@ -23,7 +23,9 @@ export async function GET(
     const program = await prisma.workoutProgram.findFirst({
       where: {
         id: programId,
-        ...(userId ? { userId: { in: [null, userId] } } : { userId: null }),
+        ...(userId
+          ? { OR: [{ userId: { equals: null } }, { userId: { equals: userId } }] }
+          : { userId: { equals: null } }),
       },
       include: {
         scheduledWorkouts: {
