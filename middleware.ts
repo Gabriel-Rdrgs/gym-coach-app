@@ -8,22 +8,24 @@ const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Rotas que qualquer um pode acessar (sem login)
   const isPublic =
     pathname.startsWith('/login') ||
     pathname.startsWith('/api/auth')
 
+  let token: unknown = null
+  try {
+    token = secret ? await getToken({ req, secret }) : null
+  } catch (e) {
+    console.error('[middleware] getToken failed:', e)
+  }
+
   if (isPublic) {
-    // Se já está logado e entrou em /login, manda para o dashboard
-    const token = await getToken({ req, secret })
     if (token && pathname.startsWith('/login')) {
       return NextResponse.redirect(new URL('/', req.url))
     }
     return NextResponse.next()
   }
 
-  // Rota protegida: exige sessão
-  const token = await getToken({ req, secret })
   if (!token) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)

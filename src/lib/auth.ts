@@ -77,7 +77,12 @@ export const handlers = {
 
 /** Sessão no servidor (RSC, API routes). NextAuth v4 usa getServerSession. */
 export async function auth() {
-  return getServerSession(authOptions)
+  try {
+    return await getServerSession(authOptions)
+  } catch (e) {
+    console.error('[auth] getServerSession failed:', e)
+    return null
+  }
 }
 
 /** Redireciona para a página de sign-in do provider (NextAuth v4 não expõe signIn no servidor). */
