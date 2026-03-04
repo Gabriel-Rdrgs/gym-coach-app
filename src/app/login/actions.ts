@@ -2,29 +2,29 @@
 'use server'
 
 import { signIn } from '@/lib/auth'
-import { AuthError } from 'next-auth'
+
+type AuthErrorLike = { type?: string; code?: string }
 
 export async function handleDemoLogin() {
   try {
     console.log('🚀 Iniciando login demo...') // Debug
-    
+
     await signIn('credentials', {
       email: 'gabriel@gymcoach.com',
       password: '123456',
       redirectTo: '/',
     })
-    
+
     console.log('✅ Login bem-sucedido!') // Debug
   } catch (error) {
     console.error('❌ Erro no login:', error) // Debug
-    
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case 'CredentialsSignin':
-          return { error: 'Credenciais inválidas' }
-        default:
-          return { error: 'Algo deu errado' }
-      }
+
+    const authErr = error as AuthErrorLike
+    if (authErr?.type === 'CredentialsSignin' || authErr?.code === 'CredentialsSignin') {
+      return { error: 'Credenciais inválidas' }
+    }
+    if (authErr?.type || authErr?.code) {
+      return { error: 'Algo deu errado' }
     }
     throw error
   }
@@ -36,7 +36,8 @@ export async function handleGoogleLogin() {
       redirectTo: '/',
     })
   } catch (error) {
-    if (error instanceof AuthError) {
+    const authErr = error as AuthErrorLike
+    if (authErr?.type || authErr?.code) {
       return { error: 'Erro ao fazer login com Google' }
     }
     throw error
