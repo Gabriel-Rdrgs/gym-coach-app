@@ -1,27 +1,49 @@
-import { auth } from './src/lib/auth'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export default auth((req) => {
+// Chave usada no JWT (NextAuth v4 usa NEXTAUTH_SECRET; Auth.js usa AUTH_SECRET)
+const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  
-  // Rotas públicas
-  const isPublic = pathname.startsWith('/login')
-  
-  // Se não está logado e tenta acessar rota protegida
-  if (!req.auth && !isPublic) {
-    const url = new URL('/login', req.url)
-    return NextResponse.redirect(url)
+
+  // Rotas que qualquer um pode acessar (sem login)
+  const isPublic =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/api/auth')
+
+  if (isPublic) {
+    // Se já está logado e entrou em /login, manda para o dashboard
+    const token = await getToken({ req, secret })
+    if (token && pathname.startsWith('/login')) {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+    return NextResponse.next()
   }
-  
-  // Se está logado e tenta acessar login, redireciona para dashboard
-  if (req.auth && isPublic) {
-    const url = new URL('/', req.url)
-    return NextResponse.redirect(url)
+
+  // Rota protegida: exige sessão
+  const token = await getToken({ req, secret })
+  if (!token) {
+    const loginUrl = new URL('/login', req.url)
+    loginUrl.searchParams.set('callbackUrl', pathname)
+    return NextResponse.redirect(loginUrl)
   }
-  
+
   return NextResponse.next()
-})
+}
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
+  // Executa em todas as rotas exceto API interna do Next, estáticos e arquivos de mídia
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

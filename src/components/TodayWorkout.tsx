@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { TodayWorkoutData } from '@/lib/queries/today-workout';
 
 interface Exercise {
   id: number;
@@ -22,24 +23,18 @@ interface Workout {
   exercises: Exercise[];
 }
 
-interface TodayWorkoutData {
-  hasWorkout: boolean;
-  program?: {
-    id: number;
-    name: string;
-  };
-  workouts?: Workout[];
-  message?: string;
-  error?: string;
-}
-
-export default function TodayWorkout() {
-  const [workoutData, setWorkoutData] = useState<TodayWorkoutData | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function TodayWorkout({ initialData }: { initialData?: TodayWorkoutData | null }) {
+  const [workoutData, setWorkoutData] = useState<TodayWorkoutData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(initialData === undefined);
 
   useEffect(() => {
+    if (initialData !== undefined) {
+      setWorkoutData(initialData);
+      setLoading(false);
+      return;
+    }
     fetchTodayWorkout();
-  }, []);
+  }, [initialData]);
 
   const fetchTodayWorkout = async () => {
     try {

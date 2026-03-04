@@ -1588,9 +1588,18 @@ DEDICAÇÃO: 40-50 horas/semana (integral)
 6. **Adicionar Enums** - Integridade de dados
 7. **Testar feature de datas anteriores** - Primeira feature nova
 
+### ⚙️ Configuração atual do projeto (referência)
+
+- **Prisma 7** com `@prisma/adapter-pg`: uso de **Pool singleton** (`pg.Pool`) passado ao `PrismaPg`, para evitar múltiplos pools e P1017 em ambientes como Supabase.
+- **Next.js:** `serverExternalPackages` em `next.config.ts` para `@prisma/client`, `@prisma/adapter-pg`, `pg` — evita problemas de bundling com o engine Wasm do Prisma.
+- **Variáveis de ambiente:** Next.js carrega `.env.local` com prioridade sobre `.env`. Manter `DATABASE_URL` consistente entre os dois (ou usar apenas um) para não conectar em banco diferente do esperado.
+- **Scripts de diagnóstico:** `scripts/test-connection.mjs` (pg direto) e `scripts/test-prisma.mjs` (Prisma fora do Next) para isolar problemas de conexão.
+
 ### Checklist de Verificação Pré-Inicio:
 
 - [ ] Arquivo .env criado com todas as variáveis
+- [ ] **Importante:** Next.js carrega `.env.local` **antes** de `.env` — valores em `.env.local` sobrescrevem `.env`. Evite ter `DATABASE_URL` diferente entre os dois (ex.: Railway em `.env.local` e Supabase em `.env`), senão o app usará sempre a do `.env.local`.
+- [ ] Documentar em README ou manter `.env.example` com as variáveis necessárias e essa prioridade.
 - [ ] PostgreSQL rodando localmente
 - [ ] `npm install` executado
 - [ ] Seed de dados inicial criado

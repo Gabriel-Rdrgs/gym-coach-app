@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 /**
  * GET /api/programs
- * Lista todos os programas de treino
+ * Lista programas do usuário logado (e programas sem dono, userId null).
  */
 export async function GET() {
   try {
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
+
     const programs = await prisma.workoutProgram.findMany({
+      where: userId
+        ? { OR: [{ userId: null }, { userId }] }
+        : { userId: null },
       include: {
         scheduledWorkouts: {
           orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }, { order: 'asc' }],
@@ -35,10 +42,13 @@ export async function GET() {
 
 /**
  * POST /api/programs
- * Cria um novo programa de treino
+ * Cria um novo programa de treino (vinculado ao usuário logado).
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
+
     const body = await request.json();
     const { name, description, startDate, scheduledWorkouts } = body;
 
@@ -51,12 +61,13 @@ export async function POST(request: NextRequest) {
 
     // Validar dados antes de criar
     console.log('Dados recebidos:', { name, description, startDate, scheduledWorkoutsCount: scheduledWorkouts?.length });
-    
-    // Criar programa com treinos agendados
+
+    // Criar programa com treinos agendados (e userId se logado)
     const programData: any = {
       name,
       description: description || null,
       startDate: startDate ? new Date(startDate) : new Date(),
+      ...(userId ? { userId } : {}),
     };
 
     // Adicionar scheduledWorkouts apenas se houver dados

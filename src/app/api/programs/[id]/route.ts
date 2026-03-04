@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 /**
  * GET /api/programs/[id]
- * Obtém um programa específico
+ * Obtém um programa específico (do usuário ou público userId null).
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
     const { id } = await params;
     const programId = parseInt(id);
 
@@ -17,8 +20,11 @@ export async function GET(
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    const program = await prisma.workoutProgram.findUnique({
-      where: { id: programId },
+    const program = await prisma.workoutProgram.findFirst({
+      where: {
+        id: programId,
+        ...(userId ? { userId: { in: [null, userId] } } : { userId: null }),
+      },
       include: {
         scheduledWorkouts: {
           orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }, { order: 'asc' }],
@@ -45,19 +51,31 @@ export async function GET(
 
 /**
  * PATCH /api/programs/[id]
- * Atualiza um programa
+ * Atualiza um programa (apenas dono).
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+    const userId = session.user.id;
     const { id } = await params;
     const programId = parseInt(id);
     const body = await request.json();
 
     if (isNaN(programId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const existing = await prisma.workoutProgram.findFirst({
+      where: { id: programId, userId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Programa não encontrado ou sem permissão' }, { status: 404 });
     }
 
     const { name, description, isActive, endDate, scheduledWorkouts } = body;
@@ -107,18 +125,30 @@ export async function PATCH(
 
 /**
  * DELETE /api/programs/[id]
- * Deleta um programa
+ * Deleta um programa (apenas dono).
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+    const userId = session.user.id;
     const { id } = await params;
     const programId = parseInt(id);
 
     if (isNaN(programId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const existing = await prisma.workoutProgram.findFirst({
+      where: { id: programId, userId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Programa não encontrado ou sem permissão' }, { status: 404 });
     }
 
     await prisma.workoutProgram.delete({

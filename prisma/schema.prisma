@@ -119,11 +119,16 @@ model WorkoutProgram {
   equipmentAvailable  Json?
   focusMuscleGroups   Json?
   objectives          Json?
-  preferences         Json?
+  preferences        Json?
   trainingDaysPerWeek Int?
+  userId              String?
+  user               User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercisePreferences ExercisePreference[]
   weeks               ProgramWeek[]
   scheduledWorkouts   ScheduledWorkout[]
+
+  @@index([userId])
+  @@index([isActive, startDate])
 }
 
 model ScheduledWorkout {
@@ -207,6 +212,7 @@ model User {
   workouts      Workout[]
   metrics       Metric[]
   personalRecords PersonalRecord[]
-  
+  workoutPrograms WorkoutProgram[]
+
   @@map("users")
 }

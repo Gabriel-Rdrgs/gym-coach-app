@@ -1,10 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Otimizações para produção
-  // output: 'standalone' removido - Vercel não precisa, apenas para Docker
-  poweredByHeader: false, // Remove header X-Powered-By
-  compress: true, // Habilita compressão gzip
+  poweredByHeader: false,
+  compress: true,
+
+  // Prisma 7 usa WebAssembly como query engine quando driver adapters são usados.
+  // Webpack não consegue carregar o Wasm do @prisma/client corretamente por padrão,
+  // causando falhas silenciosas que resultam em P1017 em todas as queries.
+  // A solução é externalizar esses pacotes para que o Node.js os carregue diretamente,
+  // sem passar pelo bundler.
+  serverExternalPackages: [
+    "@prisma/client",
+    "@prisma/adapter-pg",
+    "@prisma/driver-adapter-utils",
+    "pg",
+    "pg-native",
+  ],
   
   // Configurações de imagens
   images: {

@@ -1,53 +1,46 @@
 import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import "dotenv/config";
+import { Pool } from "pg";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-  pool: Pool | undefined;
-  adapter: InstanceType<typeof PrismaPg> | undefined;
+// Extend globalThis to safely hold singletons across Next.js hot reloads in dev.
+const g = globalThis as typeof globalThis & {
+  _prismaPool?: Pool;
+  _prismaClient?: PrismaClient;
 };
 
-// Validar DATABASE_URL
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL não está definida. Por favor, configure a variável de ambiente DATABASE_URL."
-  );
-}
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL não está definida.");
 
-const connectionString = process.env.DATABASE_URL!;
 const isSupabase = connectionString.includes("supabase");
 
-function createPool(): Pool {
-  if (globalForPrisma.pool) return globalForPrisma.pool;
-  const pool = new Pool({
-    connectionString: isSupabase
-      ? connectionString + (connectionString.includes("?") ? "&" : "?") + "connect_timeout=30"
-      : connectionString,
-    connectionTimeoutMillis: 20000,
+// ── Pool singleton ────────────────────────────────────────────────────────────
+// IMPORTANT: PrismaPg must receive a *Pool* (not a PoolConfig).
+// When a PoolConfig is passed, PrismaPg creates a brand-new Pool on every
+// adapter.connect() call (called per-request by Prisma's connection manager).
+// Multiple simultaneous Pools exhaust Supabase's connection limit → P1017.
+// When a Pool instance is passed, PrismaPg sets externalPool and ALL connect()
+// calls share the same Pool.
+if (!g._prismaPool) {
+  g._prismaPool = new Pool({
+    connectionString,
+    ...(isSupabase && { ssl: { rejectUnauthorized: false } }),
+    max: 3,
+    connectionTimeoutMillis: 30000,
     idleTimeoutMillis: 60000,
     keepAlive: true,
-    max: 5,
-    ...(isSupabase && { ssl: { rejectUnauthorized: false } }),
   });
-  if (process.env.NODE_ENV !== "production") globalForPrisma.pool = pool;
-  return pool;
+
+  g._prismaPool.on("error", (err) => {
+    console.error("[pg pool] idle client error:", err.message);
+  });
 }
 
-function createAdapter(): InstanceType<typeof PrismaPg> {
-  if (globalForPrisma.adapter) return globalForPrisma.adapter;
-  const adapter = new PrismaPg(createPool());
-  if (process.env.NODE_ENV !== "production") globalForPrisma.adapter = adapter;
-  return adapter;
-}
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter: createAdapter(),
+// ── PrismaClient singleton ────────────────────────────────────────────────────
+if (!g._prismaClient) {
+  g._prismaClient = new PrismaClient({
+    adapter: new PrismaPg(g._prismaPool),
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
+export const prisma = g._prismaClient;

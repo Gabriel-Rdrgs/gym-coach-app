@@ -140,8 +140,17 @@ Abra **http://localhost:3000**. Faça login (ex.: e-mail e senha do demo) e use 
 - No Supabase o banco está vazio; rodar `prisma migrate dev` aplica todas as migrações de novo. Não precisa criar projeto “from migration” no Supabase; o Prisma cuida disso.
 
 **“Server has closed the connection” (P1017)**  
-- Comum ao usar o **pooler** (Session ou Transaction) com o servidor de desenvolvimento. O código já reduz o tempo de vida das conexões ociosas quando usa Supabase.  
-- Se continuar acontecendo: no dashboard do Supabase, em **Database** → **Connection string**, use a **Direct connection** (a que tem `db.xxxxxxxx.supabase.co:5432`) no `.env` **só para desenvolvimento local**. A conexão direta costuma ser mais estável com `npm run dev`. Para produção (Vercel), pode seguir usando a URL do pooler.
+- Comum no **Next.js em dev** (Turbopack/App Router) com a **conexão direta** (porta 5432): o app abre várias conexões (RSC, API routes) e o Supabase fecha as ociosas ou atinge o limite.
+- **Solução**: use a **Connection Pooler** (porta 6543) no `.env` para o app rodar (dev e produção):
+  1. No Supabase: **Project Settings** → **Database** → role até **Connection string**.
+  2. Aba **Connection pooling** (ou **URI** do pooler). Copie a URL que usa **porta 6543** e host `pooler.supabase.com`.
+  3. O usuário na URL deve ser `postgres.[PROJECT-REF]` (com ponto), não só `postgres`. Exemplo:  
+     `postgresql://postgres.urilsxbqgbiowygsykcb:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
+  4. Adicione no final: `?pgbouncer=true&connection_limit=1` (se já tiver `?`, use `&`).  
+     Exemplo final:  
+     `postgresql://postgres.urilsxbqgbiowygsykcb:SUA_SENHA@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1`
+  5. Coloque essa URL em `DATABASE_URL` no `.env` e reinicie `npm run dev`.
+- Para **migrações** (`npx prisma migrate dev`), o pooler em modo *transaction* pode falhar; nesse caso, troque temporariamente `DATABASE_URL` para a conexão **direta** (porta 5432), rode a migração, e volte a usar a URL do pooler no `.env`.
 
 ---
 
