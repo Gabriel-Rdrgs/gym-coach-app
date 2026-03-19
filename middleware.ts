@@ -1,52 +1,57 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-console.log('🚀 MIDDLEWARE RODANDO!')
-
-const PUBLIC_PATHS = ['/login', '/signup', '/api/auth']
+const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 
 export async function middleware(req: NextRequest) {
-  console.log('🚀 MIDDLEWARE RODANDO!')
-  const { pathname } = req.nextUrl
+  const { pathname } = req.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
+  console.log("[middleware] path:", pathname);
 
-  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
-  let token = null
+  const isPublicRoute =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico";
 
-  if (secret) {
-    try {
-      token = await getToken({ req, secret })
-    } catch (error) {
-      console.error('[middleware] getToken error:', error)
+  let token = null;
+
+  try {
+    if (secret) {
+      token = await getToken({ req, secret });
+    } else {
+      console.warn("[middleware] NEXTAUTH_SECRET / AUTH_SECRET não definido");
     }
-  } else {
-    console.error('[middleware] NEXTAUTH_SECRET/AUTH_SECRET não definida')
+  } catch (e) {
+    console.error("[middleware] getToken failed:", e);
   }
 
-  // Rotas públicas
-  if (isPublic) {
-    // Usuário logado indo para /login → manda pro dashboard
-    if (token && pathname.startsWith('/login')) {
-      return NextResponse.redirect(new URL('/', req.url))
+  // Rotas públicas: /login, /api/auth, assets
+  if (isPublicRoute) {
+    // Se já estiver logado e for /login, manda pra home
+    if (token && pathname.startsWith("/login")) {
+      return NextResponse.redirect(new URL("/", req.url));
     }
-    return NextResponse.next()
+    return NextResponse.next();
   }
 
-  // Rotas protegidas sem token → manda para /login
+  // Rotas privadas: se não tiver token, redireciona para /login
   if (!token) {
-    const loginUrl = new URL('/login', req.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return NextResponse.redirect(loginUrl)
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    console.log("[middleware] redirecting to /login from", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Rotas protegidas com token → libera
-  return NextResponse.next()
+  // Usuário autenticado acessando rota privada
+  return NextResponse.next();
 }
 
+// Aplica o middleware em todas as rotas,
+// exceto estáticos e imagens.
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
-}
+};

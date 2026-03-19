@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { redirect } from "next/navigation";
 import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 import { getTodayWorkoutData } from '@/lib/queries/today-workout';
 import TodayWorkout from '@/components/TodayWorkout';
@@ -221,7 +222,13 @@ export default async function Home() {
   } catch {
     session = null;
   }
-  const userId = session?.user?.id ?? null;
+
+  // SE NÃO HOUVER SESSÃO, REDIRECIONA PARA /login
+  if (!session) {
+    redirect("/login");
+  }
+
+  const userId = session.user.id;
 
   let stats;
   try {
