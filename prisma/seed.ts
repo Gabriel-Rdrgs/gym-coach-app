@@ -1,4 +1,7 @@
-import { prisma } from "../src/lib/prisma";
+import "dotenv/config"
+import { prisma } from "../src/lib/prisma"
+import bcrypt from 'bcryptjs'
+
 
 const exercises = [
   // Push A (Peito/Tríceps)
@@ -115,11 +118,44 @@ const exercises = [
   { name: "Leg raise", muscleGroup: "abs", type: "isolation" },
 ];
 
+const demoUserData = {
+  email: 'gabriel@gymcoach.com',
+  name: 'Gabriel (Demo)',
+  password: '123456',
+}
+
+async function createDemoUser() {
+  try {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: demoUserData.email }
+    })
+
+    if (!existingUser || !existingUser.passwordHash) {
+      const passwordHash = await bcrypt.hash(demoUserData.password, 10)
+      await prisma.user.create({
+        data: {
+          email: demoUserData.email,
+          name: demoUserData.name,
+          passwordHash,
+        },
+      })
+      console.log(`✅ Usuário demo criado: ${demoUserData.email} / ${demoUserData.password}`)
+    } else {
+      console.log('ℹ️ Usuário demo já existe')
+    }
+  } catch (error) {
+    console.error('❌ Erro ao criar usuário demo:', error)
+  }
+}
+
 async function main() {
   console.log("🌱 Iniciando seed do banco de dados...");
 
   try {
-    // Usar Promise.all para executar upserts em paralelo (mais eficiente)
+    // 1. Criar usuário demo PRIMEIRO (precisa para workouts depois)
+    await createDemoUser()
+    
+    // 2. Criar exercícios (código original)
     await Promise.all(
       exercises.map(async (ex) => {
         await prisma.exercise.upsert({
@@ -131,12 +167,13 @@ async function main() {
     );
 
     console.log(`✅ ${exercises.length} exercícios processados (criados ou atualizados).`);
-    console.log(`🎉 Seed concluído com sucesso! Total: ${exercises.length} exercícios.`);
+    console.log(`🎉 Seed concluído com sucesso!`);
   } catch (error) {
     console.error("❌ Erro no seed:", error);
     throw error;
   }
 }
+
 
 main()
   .then(async () => {

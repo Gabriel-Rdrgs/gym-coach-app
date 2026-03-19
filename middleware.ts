@@ -2,50 +2,51 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Chave usada no JWT (NextAuth v4 usa NEXTAUTH_SECRET; Auth.js usa AUTH_SECRET)
-const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+console.log('🚀 MIDDLEWARE RODANDO!')
+
+const PUBLIC_PATHS = ['/login', '/signup', '/api/auth']
 
 export async function middleware(req: NextRequest) {
+  console.log('🚀 MIDDLEWARE RODANDO!')
   const { pathname } = req.nextUrl
 
-  const isPublic =
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/api/auth')
+  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
 
-  let token: unknown = null
-  try {
-    token = secret ? await getToken({ req, secret }) : null
-  } catch (e) {
-    console.error('[middleware] getToken failed:', e)
+  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET
+  let token = null
+
+  if (secret) {
+    try {
+      token = await getToken({ req, secret })
+    } catch (error) {
+      console.error('[middleware] getToken error:', error)
+    }
+  } else {
+    console.error('[middleware] NEXTAUTH_SECRET/AUTH_SECRET não definida')
   }
 
+  // Rotas públicas
   if (isPublic) {
+    // Usuário logado indo para /login → manda pro dashboard
     if (token && pathname.startsWith('/login')) {
       return NextResponse.redirect(new URL('/', req.url))
     }
     return NextResponse.next()
   }
 
+  // Rotas protegidas sem token → manda para /login
   if (!token) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
+  // Rotas protegidas com token → libera
   return NextResponse.next()
 }
 
 export const config = {
-  // Executa em todas as rotas exceto API interna do Next, estáticos e arquivos de mídia
   matcher: [
-    /*
-     * Match all request paths except:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

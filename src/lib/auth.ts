@@ -1,19 +1,14 @@
 import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import type { AuthOptions } from "next-auth"
 
 export const authOptions: AuthOptions = {
+  // Sem PrismaAdapter — usamos JWT puro, sem salvar sessão no banco
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: PrismaAdapter(prisma),
+
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-    }),
     Credentials({
       id: "credentials",
       name: "credentials",
@@ -22,71 +17,85 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        console.log('🔍 AUTH:', { email: credentials?.email });
-        
-        if (!credentials?.email || !credentials?.password) return null;
+        // 1. Valida se os campos chegaram
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
 
+        // 2. Busca o usuário no banco pelo email
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
-        });
-        
-        console.log('👤 USER:', !!user, user?.email);
+        })
 
-        if (!user?.passwordHash) {
-          console.log('❌ NO HASH');
-          return null;
+        // 3. Se não encontrou ou não tem senha, nega acesso
+        if (!user || !user.passwordHash) {
+          return null
         }
-        
+
+        // 4. Compara a senha digitada com o hash armazenado
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
-        );
-        
-        console.log('✅ VALID?', isValid);
+        )
 
-        if (!isValid) return null;
+        // 5. Se a senha não bate, nega acesso
+        if (!isValid) {
+          return null
+        }
 
-        console.log('🎉 LOGIN SUCCESS');
+        // 6. Retorna o objeto do usuário — NextAuth vai usar isso para montar o token
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
-        };
+        }
       },
     }),
   ],
+
+  // Redireciona para /login se não autenticado
   pages: {
     signIn: "/login",
   },
+
+  // Sessão baseada em JWT (token no cookie) — não precisa de banco para sessões
   session: {
     strategy: "jwt",
+    // Token expira em 30 dias
+    maxAge: 30 * 24 * 60 * 60,
   },
+
   callbacks: {
-    async session({ session, token }) {
-      if (token?.sub) session.user.id = token.sub;
-      return session;
-    },
+    // Chamado quando o token JWT é criado/atualizado
     async jwt({ token, user }) {
-      if (user) token.sub = user.id;
-      return token;
+      // Na primeira vez (login), "user" existe — guardamos o id no token
+      if (user) {
+        token.sub = user.id
+      }
+      return token
+    },
+
+    // Chamado sempre que o frontend pede a sessão (useSession, getServerSession)
+    async session({ session, token }) {
+      // Injeta o id do usuário (que veio do token) no objeto session
+      if (token?.sub) {
+        session.user.id = token.sub
+      }
+      return session
     },
   },
+
+  // Logs de debug apenas em desenvolvimento
   debug: process.env.NODE_ENV === "development",
 }
 
+// Handler para a rota /api/auth/[...nextauth]
 const handler = NextAuth(authOptions)
-
 export { handler as GET, handler as POST }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
+// Função auxiliar para Server Components — busca a sessão atual no servidor
 export async function auth() {
-  // getServerSession precisa do handler
   const { getServerSession } = await import("next-auth")
   return getServerSession(authOptions)
 }

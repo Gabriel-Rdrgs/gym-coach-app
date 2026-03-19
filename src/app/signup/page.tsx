@@ -1,62 +1,68 @@
 "use client"
 
-import { signIn } from "next-auth/react"
 import { useState } from "react"
+import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter()
 
-  // Estado do formulário
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-
-  // Estado de UI
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Submissão do formulário principal
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault() // Impede o reload da página
-    setLoading(true)
+    e.preventDefault()
     setError(null)
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false, // Não redireciona automaticamente — tratamos o resultado aqui
+    // Validação no cliente antes de ir ao servidor
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.")
+      return
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.")
+      return
+    }
+
+    setLoading(true)
+
+    // 1. Cria a conta no banco via nossa API
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
     })
 
-    if (result?.error) {
-      // NextAuth retorna "CredentialsSignin" quando o authorize retorna null
-      setError("Email ou senha incorretos. Verifique suas credenciais.")
+    const data = await res.json()
+
+    if (!res.ok) {
+      // A API retorna { error: "mensagem" } em caso de falha
+      setError(data.error || "Erro ao criar conta. Tente novamente.")
       setLoading(false)
       return
     }
 
-    // Login bem-sucedido — redireciona para o dashboard
-    router.push("/")
-    router.refresh() // Força o Server Component (page.tsx) a re-renderizar com a sessão
-  }
-
-  // Login rápido com a conta demo
-  async function handleDemoLogin() {
-    setLoading(true)
-    setError(null)
-
+    // 2. Conta criada com sucesso — faz login automático
     const result = await signIn("credentials", {
-      email: "gabriel@gymcoach.com",
-      password: "123456",
+      email,
+      password,
       redirect: false,
     })
 
     if (result?.error) {
-      setError("Conta demo não encontrada. Rode o seed do banco primeiro: npm run seed")
+      // Conta foi criada mas o login falhou (improvável, mas tratamos assim mesmo)
+      setError("Conta criada! Mas ocorreu um erro ao fazer login. Tente entrar manualmente.")
       setLoading(false)
       return
     }
 
+    // 3. Tudo certo — vai para o dashboard
     router.push("/")
     router.refresh()
   }
@@ -70,11 +76,27 @@ export default function LoginPage() {
           <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             💪 Gym Coach
           </h2>
-          <p className="mt-2 text-gray-600">Entre com sua conta</p>
+          <p className="mt-2 text-gray-600">Crie sua conta gratuita</p>
         </div>
 
-        {/* Formulário principal */}
+        {/* Formulário */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Nome
+            </label>
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Seu nome completo"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
@@ -98,16 +120,31 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Sua senha"
+              placeholder="Mínimo 6 caracteres"
               className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
             />
           </div>
 
-          {/* Mensagem de erro */}
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              Confirmar Senha
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repita sua senha"
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+
           {error && (
             <p className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-lg">
               {error}
@@ -122,38 +159,19 @@ export default function LoginPage() {
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                Entrando...
+                Criando conta...
               </span>
             ) : (
-              "Entrar"
+              "Criar Conta"
             )}
           </button>
         </form>
 
-        {/* Separador */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">ou</span>
-          </div>
-        </div>
-
-        {/* Botão demo */}
-        <button
-          onClick={handleDemoLogin}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          🚀 Entrar como Gabriel (Demo)
-        </button>
-
-        {/* Link para cadastro */}
+        {/* Link para login */}
         <p className="text-center text-sm text-gray-600">
-          Não tem uma conta?{" "}
-          <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
-            Criar conta
+          Já tem uma conta?{" "}
+          <Link href="/login" className="text-blue-600 font-semibold hover:underline">
+            Entrar
           </Link>
         </p>
       </div>
