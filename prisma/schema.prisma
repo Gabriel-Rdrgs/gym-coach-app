@@ -30,13 +30,12 @@ model Workout {
   date              DateTime           @default(now())
   template          String
   notes             String?
+  userId            String
   scheduledWorkouts ScheduledWorkout[] @relation("WorkoutScheduledWorkouts")
+  user              User               @relation(fields: [userId], references: [id])
   exercises         WorkoutExercise[]
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
-
 }
 
 model WorkoutExercise {
@@ -73,9 +72,9 @@ model Metric {
   bodyFatPercentage  Float?
   chestCircumference Float?
   thighCircumference Float?
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+
   @@index([userId])
 }
 
@@ -98,10 +97,10 @@ model PersonalRecord {
   reps       Int
   date       DateTime @default(now())
   workoutId  Int?
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
   userId     String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
   user       User     @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
   @@index([exerciseId])
   @@index([date])
@@ -119,13 +118,13 @@ model WorkoutProgram {
   equipmentAvailable  Json?
   focusMuscleGroups   Json?
   objectives          Json?
-  preferences        Json?
+  preferences         Json?
   trainingDaysPerWeek Int?
   userId              String?
-  user               User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercisePreferences ExercisePreference[]
   weeks               ProgramWeek[]
   scheduledWorkouts   ScheduledWorkout[]
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isActive, startDate])
@@ -195,23 +194,19 @@ model ExerciseSubstitution {
   @@index([originalExerciseId])
   @@index([substitutedExerciseId])
 }
-// Adicione isso no schema.prisma
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relações com seus dados
-  workouts      Workout[]
-  metrics       Metric[]
+  id              String           @id @default(cuid())
+  name            String?
+  email           String?          @unique
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  metrics         Metric[]
   personalRecords PersonalRecord[]
+  workouts        Workout[]
   workoutPrograms WorkoutProgram[]
 
   @@map("users")

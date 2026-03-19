@@ -23,29 +23,48 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+async authorize(credentials) {
+  console.log('🔍 AUTH:', { email: credentials?.email });
+  
+  if (!credentials?.email || !credentials?.password) {
+    console.log('❌ NO CREDENTIALS');
+    return null;
+  }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        })
+  const user = await prisma.user.findUnique({
+    where: { email: credentials.email as string },
+  });
+  
+  console.log('👤 USER:', !!user, user?.email);
 
-        if (!user?.passwordHash) return null
+  if (!user?.passwordHash) {
+    console.log('❌ NO HASH');
+    return null;
+  }
+  
+  console.log('🔑 HASH LEN:', user.passwordHash.length);
+  
+  const isValid = await bcrypt.compare(
+    credentials.password as string,
+    user.passwordHash
+  );
+  
+  console.log('✅ VALID?', isValid);
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        )
+  if (!isValid) {
+    console.log('❌ INVALID PASSWORD');
+    return null;
+  }
 
-        if (!isValid) return null
+  console.log('🎉 SUCCESS');
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    image: user.image,
+  };
+},
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        }
-      },
     }),
   ],
   pages: {
