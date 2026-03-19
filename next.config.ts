@@ -17,12 +17,15 @@ const nextConfig: NextConfig = {
     "pg-native",
   ],
   
+  // DESABILITA TURBOPACK (resolve o erro de build)
+  turbopack: false,
+  
   // Configurações de imagens
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // Permite imagens de qualquer domínio HTTPS
+        hostname: '**',
       },
     ],
   },
