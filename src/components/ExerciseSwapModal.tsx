@@ -12,10 +12,16 @@ interface Exercise {
 }
 
 interface ExerciseSwapModalProps {
-  currentExercise: { name: string; muscleGroup: string };
+  currentExercise: {
+    name: string;
+    muscleGroup: string;
+    type?: string;
+    sets?: any[];
+  };
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (exercise: Exercise) => void;
+  onSelect: (exercise: any) => void;
+  mode?: "add" | "swap"; // <<< NOVO
 }
 
 export default function ExerciseSwapModal({
@@ -23,6 +29,7 @@ export default function ExerciseSwapModal({
   isOpen,
   onClose,
   onSelect,
+  mode = "swap", // <<< NOVO (valor padrão)
 }: ExerciseSwapModalProps) {
   const [alternatives, setAlternatives] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,31 +39,60 @@ export default function ExerciseSwapModal({
   const rollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isOpen && currentExercise.name) {
-      loadAlternatives();
+    if (isOpen) {
+      // No modo "add", não precisa de name para carregar
+      // No modo "swap", só carrega se tiver nome do exercício atual
+      if (mode === "add" || currentExercise.name) {
+        loadAlternatives();
+      }
     }
-    // Limpar intervalo ao fechar o modal
     return () => {
       if (rollIntervalRef.current) {
         clearInterval(rollIntervalRef.current);
       }
     };
-  }, [isOpen, currentExercise.name]);
+  }, [isOpen, currentExercise?.name, mode]);
+
+
 
   const loadAlternatives = async () => {
-    setLoading(true);
     try {
-      const response = await fetch(
-        `/api/exercises/alternatives?exerciseName=${encodeURIComponent(currentExercise.name)}&limit=10`
-      );
+      setLoading(true);
+
+      let url: string;
+
+      if (mode === "swap") {
+        // MODO TROCAR: continua usando a lógica antiga
+        url = `/api/exercises/alternatives?name=${encodeURIComponent(
+          currentExercise.name
+        )}`;
+      } else {
+        // MODO ADICIONAR: usa a lista geral de exercícios
+        url = `/api/exercises`; // <<< usa a rota que você já tem [file:31]
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        setAlternatives([]);
+        return;
+      }
+
       const data = await response.json();
-      setAlternatives(data.alternatives || []);
+
+      // Ajustar conforme formato real da resposta
+      // /api/exercises devolve { exercises: [...] } [file:31]
+      const list =
+        mode === "swap" ? data.alternatives ?? [] : data.exercises ?? [];
+
+      setAlternatives(list);
     } catch (error) {
-      console.error('Erro ao carregar alternativas:', error);
+      console.error("Erro ao carregar alternativas:", error);
+      setAlternatives([]);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleRoll = () => {
     const filtered = alternatives.filter((ex) =>
@@ -130,7 +166,7 @@ export default function ExerciseSwapModal({
             className="text-2xl font-bold text-glow"
             style={{ color: 'var(--accent-primary)' }}
           >
-            🔄 Trocar Exercício
+            🔄 {mode === "add" ? "Adicionar Exercício" : "Trocar Exercício"}
           </h2>
           <button
             onClick={onClose}
@@ -144,9 +180,11 @@ export default function ExerciseSwapModal({
         {/* Área de busca fixa */}
         <div className="p-6 border-b" style={{ borderColor: 'rgba(0, 217, 255, 0.2)' }}>
           <div className="flex items-center justify-between mb-4">
+            {mode === "swap" && (
             <p className="text-base" style={{ color: 'var(--text-muted)' }}>
             Exercício atual: <span className="font-semibold" style={{ color: 'var(--accent-primary)' }}>{currentExercise.name}</span>
           </p>
+          )}
             {!loading && filteredAlternatives.length > 0 && (
               <p className="text-sm" style={{ color: 'var(--accent-secondary)' }}>
                 {filteredAlternatives.length} {filteredAlternatives.length === 1 ? 'alternativa' : 'alternativas'}

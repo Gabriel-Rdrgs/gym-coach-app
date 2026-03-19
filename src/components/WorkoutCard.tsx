@@ -24,7 +24,9 @@ interface WorkoutCardProps {
   removeSet: (exerciseIndex: number, setIndex: number) => void;
   setSwapExerciseIndex: (index: number | null) => void;
   setSwapModalOpen: (open: boolean) => void;
+  onRemoveExercise?: () => void; // NOVO
 }
+
 
 const WorkoutCard = memo(({ 
   exercise, 
@@ -33,7 +35,8 @@ const WorkoutCard = memo(({
   addSet, 
   removeSet,
   setSwapExerciseIndex,
-  setSwapModalOpen
+  setSwapModalOpen,
+  onRemoveExercise, // NOVO
 }: WorkoutCardProps) => {
   const [suggestion, setSuggestion] = useState<{
     suggestedWeight: number;
@@ -174,6 +177,21 @@ const WorkoutCard = memo(({
           >
             🔄
           </button>
+          {onRemoveExercise && (
+    <button
+      onClick={onRemoveExercise}
+      className="px-3 py-1 text-sm font-medium transition-all hover:scale-105"
+      style={{
+        color: 'var(--accent-warning)',
+        border: '1px solid var(--accent-warning)',
+        borderRadius: 'var(--border-radius)',
+      }}
+      title="Remover exercício"
+      type="button"
+    >
+      🗑
+    </button>
+  )}
         </div>
       </div>
 

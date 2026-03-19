@@ -33,6 +33,8 @@ export default function WorkoutsClient() {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapExerciseIndex, setSwapExerciseIndex] = useState<number | null>(null);
   const toast = useToast();
+  const [addingExercise, setAddingExercise] = useState(false); // <<< NOVO
+
 
   const handleProgramSelect = (program: keyof typeof workoutPrograms) => {
     setSelectedProgram(program);
@@ -118,6 +120,14 @@ export default function WorkoutsClient() {
       return updatedWorkout;
     });
   }, []);
+  const removeExercise = useCallback((exerciseIndex: number) => { // <<< NOVO
+    setCurrentWorkout((prev) => prev.filter((_, idx) => idx !== exerciseIndex));
+  }, []); // <<< NOVO
+  const handleAddExerciseClick = () => { // <<< NOVO
+    setAddingExercise(true);
+    setSwapExerciseIndex(null);
+    setSwapModalOpen(true);
+  }; // <<< NOVO
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -170,6 +180,7 @@ export default function WorkoutsClient() {
 
   const handleExerciseSwap = (newExercise: any) => {
     if (swapExerciseIndex !== null) {
+      // Trocar exercício existente
       const updatedWorkout = [...currentWorkout];
       updatedWorkout[swapExerciseIndex] = {
         ...updatedWorkout[swapExerciseIndex],
@@ -178,10 +189,27 @@ export default function WorkoutsClient() {
         type: newExercise.type || getExerciseType(newExercise.name),
       };
       setCurrentWorkout(updatedWorkout);
+    } else if (addingExercise) {
+      // Adicionar novo exercício ao final
+      setCurrentWorkout((prev) => [
+        ...prev,
+        {
+          name: newExercise.name,
+          muscleGroup: newExercise.muscleGroup,
+          type: newExercise.type || getExerciseType(newExercise.name),
+          sets: [
+            { setNumber: 1, weight: 0, reps: 0, rir: undefined },
+            { setNumber: 2, weight: 0, reps: 0, rir: undefined },
+            { setNumber: 3, weight: 0, reps: 0, rir: undefined },
+          ],
+        },
+      ]);
     }
     setSwapModalOpen(false);
     setSwapExerciseIndex(null);
+    setAddingExercise(false);
   };
+
 
   // WorkoutCard removido - agora é um componente separado em @/components/WorkoutCard.tsx
 
@@ -299,9 +327,17 @@ export default function WorkoutsClient() {
               removeSet={removeSet}
               setSwapExerciseIndex={setSwapExerciseIndex}
               setSwapModalOpen={setSwapModalOpen}
+              onRemoveExercise={() => removeExercise(index)} // <<< NOVO
             />
           ))}
         </div>
+                <button // <<< NOVO
+          type="button"
+          onClick={handleAddExerciseClick}
+          className="btn-secondary mb-8"
+        >
+          + Adicionar exercício
+        </button>
 
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
@@ -398,14 +434,25 @@ export default function WorkoutsClient() {
         </div>
         </div>
 
-        {/* Modal de Troca de Exercício */}
-        {swapExerciseIndex !== null && (
+        {/* Modal de Troca / Adição de Exercício */} {/* <<< NOVO comentário */}
+        {(swapExerciseIndex !== null || addingExercise) && (
           <ExerciseSwapModal
-            currentExercise={currentWorkout[swapExerciseIndex]}
+            currentExercise={
+              swapExerciseIndex !== null
+                ? currentWorkout[swapExerciseIndex]
+                : {
+                    name: "",
+                    muscleGroup: "",
+                    type: "isolation",
+                    sets: [],
+                  }
+            }
+            mode={addingExercise ? "add" : "swap"} // <<< NOVO
             isOpen={swapModalOpen}
             onClose={() => {
               setSwapModalOpen(false);
               setSwapExerciseIndex(null);
+              setAddingExercise(false);
             }}
             onSelect={handleExerciseSwap}
           />
@@ -413,7 +460,6 @@ export default function WorkoutsClient() {
       </div>
     );
   }
-
   // Se um programa foi selecionado, mostrar os templates desse programa
   if (selectedProgram) {
     const program = workoutPrograms[selectedProgram];
