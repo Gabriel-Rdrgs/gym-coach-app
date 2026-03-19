@@ -1,14 +1,15 @@
-// src/lib/auth.ts - NextAuth v4 (getServerSession + handler)
+// src/lib/auth.ts - NextAuth v4 corrigido
 import NextAuth from "next-auth"
-import { getServerSession } from "next-auth"
-import { redirect } from "next/navigation"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"  // ← MUDANÇA: @next-auth/ não @auth/
 import { prisma } from "./prisma"
+import bcrypt from "bcryptjs"  // ← ADICIONAR bcryptjs no package.json se não existir
 import type { AuthOptions } from "next-auth"
+import { getServerSession } from "next-auth"
 
 export const authOptions: AuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
@@ -23,23 +24,27 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (
-          credentials?.email === "gabriel@gymcoach.com" &&
-          credentials?.password === "123456"
-        ) {
-          const user = await prisma.user.findUnique({
-            where: { email: "gabriel@gymcoach.com" },
-          })
-          if (user) {
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              image: user.image,
-            }
-          }
+        if (!credentials?.email || !credentials?.password) return null
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        })
+
+        if (!user?.passwordHash) return null
+
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.passwordHash
+        )
+
+        if (!isValid) return null
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
         }
-        return null
       },
     }),
   ],
@@ -50,10 +55,8 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async session({ session, token, user }) {
-      if (user) {
-        session.user.id = user.id
-      } else if (token?.sub) {
+    async session({ session, token }) {
+      if (token?.sub) {
         session.user.id = token.sub
       }
       return session
@@ -75,23 +78,11 @@ export const handlers = {
   POST: nextAuthHandler,
 }
 
-/** Sessão no servidor (RSC, API routes). NextAuth v4 usa getServerSession. */
 export async function auth() {
   try {
     return await getServerSession(authOptions)
   } catch (e) {
-    console.error('[auth] getServerSession failed:', e)
+    console.error("[auth] getServerSession failed:", e)
     return null
   }
-}
-
-/** Redireciona para a página de sign-in do provider (NextAuth v4 não expõe signIn no servidor). */
-export function signIn(
-  provider: string,
-  options?: { redirectTo?: string }
-) {
-  const callbackUrl = options?.redirectTo ?? "/"
-  redirect(
-    `/api/auth/signin/${provider}?callbackUrl=${encodeURIComponent(callbackUrl)}`
-  )
 }

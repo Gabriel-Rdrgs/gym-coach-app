@@ -11,10 +11,16 @@ export const dynamic = 'force-dynamic';
 async function getStats(userId: string | null) {
   try {
     if (!userId) {
+      let totalExercises = 0
+      try {
+        totalExercises = await prisma.exercise.count()
+      } catch {
+        totalExercises = 0
+      }
       return {
         recentWorkouts: [],
         latestMetric: null,
-        totalExercises: await prisma.exercise.count(),
+        totalExercises,
         totalWorkouts: 0,
         totalMetrics: 0,
         thisWeekWorkouts: 0,
@@ -209,7 +215,12 @@ const calculateValidSets = (workout: {
 };
 
 export default async function Home() {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   const userId = session?.user?.id ?? null;
 
   let stats;
@@ -217,7 +228,6 @@ export default async function Home() {
     stats = await getStats(userId);
   } catch (error) {
     console.error('Erro ao carregar página inicial:', error);
-    // Usar valores padrão em caso de erro
     stats = {
       recentWorkouts: [],
       latestMetric: null,
@@ -234,8 +244,12 @@ export default async function Home() {
     };
   }
 
-  // Treino do dia no mesmo request (uma conexão só; evita P1017 na API)
-  const todayWorkoutData = await getTodayWorkoutData(userId);
+  let todayWorkoutData;
+  try {
+    todayWorkoutData = await getTodayWorkoutData(userId);
+  } catch {
+    todayWorkoutData = { hasWorkout: false, message: 'Erro ao carregar treino do dia' };
+  }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
