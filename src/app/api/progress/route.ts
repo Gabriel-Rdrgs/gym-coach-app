@@ -4,40 +4,56 @@ import {
   calculateValidSetsForWorkouts,
   groupValidSetsByMuscleGroup,
 } from '@/lib/progress-utils';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
-    // Buscar todas as métricas ordenadas por data
-    const metrics = await prisma.metric.findMany({
-      orderBy: { date: 'asc' },
-    }).catch(() => []);
+    // 1) Descobrir o usuário logado
+    const session = await auth();
 
-    // Buscar todos os treinos com exercícios e séries
-    const workouts = await prisma.workout.findMany({
-      include: {
-        exercises: {
-          include: {
-            exercise: true,
-            sets: true,
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Não autenticado' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // 2) Buscar MÉTRICAS só desse usuário
+    const metrics = await prisma.metric
+      .findMany({
+        where: { userId },
+        orderBy: { date: 'asc' },
+      })
+      .catch(() => []);
+
+    // 3) Buscar TREINOS só desse usuário
+    const workouts = await prisma.workout
+      .findMany({
+        where: { userId },
+        include: {
+          exercises: {
+            include: {
+              exercise: true,
+              sets: true,
+            },
           },
         },
-      },
-      orderBy: { date: 'asc' },
-    }).catch(() => []);
+        orderBy: { date: 'asc' },
+      })
+      .catch(() => []);
 
-    // Calcular séries válidas baseadas em RIR
+    // 4) Calcular séries válidas
     const validSetsData = calculateValidSetsForWorkouts(workouts);
-    
-    // Adicionar template aos dados de séries válidas
     const validSetsWithTemplate = validSetsData.map((validSet, index) => ({
       ...validSet,
       template: workouts[index].template,
     }));
 
-    // Agrupar séries válidas por grupo muscular ao longo do tempo
     const validSetsByMuscleGroup = groupValidSetsByMuscleGroup(validSetsData);
 
-    // Preparar dados de métricas para gráficos
+    // 5) Preparar dados das métricas
     const metricsData = metrics.map((metric: any) => ({
       date: metric.date.toISOString().split('T')[0],
       weight: metric.weight,
@@ -51,17 +67,18 @@ export async function GET() {
       stress: metric.stress,
     }));
 
-    // Calcular estatísticas de frequência
+    // 6) Frequência de treinos e grupos musculares
     const workoutFrequency = calculateWorkoutFrequency(workouts);
     const muscleGroupFrequency = calculateMuscleGroupFrequency(workouts);
 
-    // Buscar PRs para gráfico
-    const prs = await prisma.personalRecord.findMany({
-      include: {
-        exercise: true,
-      },
-      orderBy: { date: 'asc' },
-    }).catch(() => []);
+    // 7) PRs só desse usuário
+    const prs = await prisma.personalRecord
+      .findMany({
+        where: { userId },
+        include: { exercise: true },
+        orderBy: { date: 'asc' },
+      })
+      .catch(() => []);
 
     const prsData = prs.map((pr) => ({
       date: pr.date.toISOString().split('T')[0],
@@ -70,10 +87,10 @@ export async function GET() {
       reps: pr.reps,
     }));
 
-    // Preparar dados para heatmap (últimos 12 meses)
+    // 8) Heatmap (últimos 12 meses, só treinos desse usuário)
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-    
+
     const heatmapData = workouts
       .filter((workout) => new Date(workout.date) >= twelveMonthsAgo)
       .map((workout) => {
@@ -92,21 +109,23 @@ export async function GET() {
       workoutFrequency,
       muscleGroupFrequency,
       prs: prsData,
-      heatmapData: heatmapData,
+      heatmapData,
     });
   } catch (error: any) {
     console.error('Erro ao buscar dados de progresso:', error);
-    // Retornar dados vazios ao invés de erro 500
-    return NextResponse.json({
-      metrics: [],
-      validSets: [],
-      validSetsByMuscleGroup: [],
-      workoutFrequency: [],
-      muscleGroupFrequency: [],
-      prs: [],
-      heatmapData: [],
-      error: error?.message || 'Erro ao buscar dados de progresso',
-    }, { status: 200 }); // Retornar 200 com dados vazios para não quebrar a UI
+    return NextResponse.json(
+      {
+        metrics: [],
+        validSets: [],
+        validSetsByMuscleGroup: [],
+        workoutFrequency: [],
+        muscleGroupFrequency: [],
+        prs: [],
+        heatmapData: [],
+        error: error?.message || 'Erro ao buscar dados de progresso',
+      },
+      { status: 200 }
+    );
   }
 }
 

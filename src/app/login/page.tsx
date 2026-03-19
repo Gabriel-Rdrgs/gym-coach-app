@@ -40,27 +40,6 @@ export default function LoginPage() {
     router.refresh() // Força o Server Component (page.tsx) a re-renderizar com a sessão
   }
 
-  // Login rápido com a conta demo
-  async function handleDemoLogin() {
-    setLoading(true)
-    setError(null)
-
-    const result = await signIn("credentials", {
-      email: "gabriel@gymcoach.com",
-      password: "123456",
-      redirect: false,
-    })
-
-    if (result?.error) {
-      setError("Conta demo não encontrada. Rode o seed do banco primeiro: npm run seed")
-      setLoading(false)
-      return
-    }
-
-    router.push("/")
-    router.refresh()
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-8">
@@ -139,16 +118,6 @@ export default function LoginPage() {
             <span className="px-2 bg-white text-gray-500">ou</span>
           </div>
         </div>
-
-        {/* Botão demo */}
-        <button
-          onClick={handleDemoLogin}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          🚀 Entrar como Gabriel (Demo)
-        </button>
-
         {/* Link para cadastro */}
         <p className="text-center text-sm text-gray-600">
           Não tem uma conta?{" "}
