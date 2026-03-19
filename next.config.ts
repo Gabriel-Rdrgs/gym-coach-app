@@ -18,10 +18,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // FORÇA WEBPACK (resolve tudo)
-  webpack: (config, { isServer }) => {
-    return config;
-  },
+  turbopack: {},  // ← SÓ ESSA LINHA
 };
 
 export default nextConfig;
