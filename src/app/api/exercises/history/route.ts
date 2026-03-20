@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
     const { searchParams } = new URL(request.url);
     const exerciseName = searchParams.get('name');
 
@@ -16,7 +25,6 @@ export async function GET(request: NextRequest) {
 
     const decodedName = decodeURIComponent(exerciseName);
 
-    // Buscar o exercício pelo nome
     const exercise = await prisma.exercise.findUnique({
       where: { name: decodedName },
     });
@@ -28,52 +36,45 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar histórico de treinos com este exercício (últimos 5 treinos para análise de tendência)
+    // Buscar histórico apenas dos treinos do usuário logado
     const workoutExercises = await prisma.workoutExercise.findMany({
-      where: { exerciseId: exercise.id },
+      where: {
+        exerciseId: exercise.id,
+        workout: { userId }, // <- filtro por usuário
+      },
       include: {
         workout: true,
         sets: {
           orderBy: { setNumber: 'asc' },
         },
       },
-      orderBy: {
-        id: 'desc', // Ordenar por ID (mais recente primeiro)
-      },
-      take: 5, // Últimos 5 treinos para análise de tendência
+      orderBy: { id: 'desc' },
+      take: 5,
     });
 
-    // Ordenar por data do treino manualmente
     type WorkoutExerciseWithRelations = Prisma.WorkoutExerciseGetPayload<{
       include: { workout: true; sets: true };
     }>;
-    
-    const sortedWorkoutExercises: WorkoutExerciseWithRelations[] = [...workoutExercises];
-    sortedWorkoutExercises.sort((a: WorkoutExerciseWithRelations, b: WorkoutExerciseWithRelations) => {
-      return b.workout.date.getTime() - a.workout.date.getTime();
-    });
-    
-    // Usar a versão ordenada
-    const workoutExercisesSorted = sortedWorkoutExercises;
 
-    // Buscar PR do exercício
+    const workoutExercisesSorted: WorkoutExerciseWithRelations[] = [...workoutExercises].sort(
+      (a, b) => b.workout.date.getTime() - a.workout.date.getTime()
+    );
+
+    // Buscar PR apenas do usuário logado
     const pr = await prisma.personalRecord.findFirst({
-      where: { exerciseId: exercise.id },
+      where: { exerciseId: exercise.id, userId }, // <- filtro por usuário
       orderBy: { weight: 'desc' },
     });
 
-    // Encontrar última série registrada
     let lastSet = null;
     if (workoutExercisesSorted.length > 0) {
       const lastWorkoutExercise = workoutExercisesSorted[0];
       if (lastWorkoutExercise.sets.length > 0) {
-        // Pegar a última série do último treino
         const sets = lastWorkoutExercise.sets;
         lastSet = sets[sets.length - 1];
       }
     }
 
-    // Calcular média das séries do último treino (todas as séries válidas)
     let averageWeight = null;
     let averageReps = null;
     let averageRir = null;
@@ -90,7 +91,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calcular tendência dos últimos treinos (últimos 3-5 treinos)
     let trendData = null;
     if (workoutExercisesSorted.length >= 2) {
       const recentWorkouts = workoutExercisesSorted.slice(0, Math.min(5, workoutExercisesSorted.length));
@@ -109,8 +109,9 @@ export async function GET(request: NextRequest) {
         const last = workoutAverages[0];
         const weightChange = last.weight - first.weight;
         const repsChange = last.reps - first.reps;
-        const daysBetween = Math.floor((last.date.getTime() - first.date.getTime()) / (1000 * 60 * 60 * 24));
-        
+        const daysBetween = Math.floor(
+          (last.date.getTime() - first.date.getTime()) / (1000 * 60 * 60 * 24)
+        );
         trendData = {
           weightChange,
           repsChange,
@@ -121,9 +122,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calcular tempo desde o último treino
     const daysSinceLastWorkout = workoutExercisesSorted.length > 0
-      ? Math.floor((Date.now() - workoutExercisesSorted[0].workout.date.getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.floor(
+          (Date.now() - workoutExercisesSorted[0].workout.date.getTime()) / (1000 * 60 * 60 * 24)
+        )
       : null;
 
     return NextResponse.json({
@@ -142,20 +144,12 @@ export async function GET(request: NextRequest) {
           }
         : null,
       averageSet: averageWeight
-        ? {
-            weight: averageWeight,
-            reps: averageReps,
-            rir: averageRir,
-          }
+        ? { weight: averageWeight, reps: averageReps, rir: averageRir }
         : null,
       trendData,
       daysSinceLastWorkout,
       pr: pr
-        ? {
-            weight: pr.weight,
-            reps: pr.reps,
-            date: pr.date,
-          }
+        ? { weight: pr.weight, reps: pr.reps, date: pr.date }
         : null,
       recentWorkouts: workoutExercisesSorted.length,
     });
@@ -167,4 +161,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

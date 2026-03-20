@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 
-/**
- * GET /api/programs
- * Lista programas do usuário logado (e programas sem dono, userId null).
- */
 export async function GET() {
   try {
     const session = await auth();
-    const userId = session?.user?.id ?? null;
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
 
     const programs = await prisma.workoutProgram.findMany({
-      where: userId
-        ? { OR: [{ userId: { equals: null } }, { userId: { equals: userId } }] }
-        : { userId: { equals: null } },
+      where: {
+        OR: [
+          { userId: { equals: null } },   // programas públicos
+          { userId: { equals: userId } },  // programas do usuário
+        ],
+      },
       include: {
         scheduledWorkouts: {
           orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }, { order: 'asc' }],
@@ -29,9 +33,8 @@ export async function GET() {
     return NextResponse.json({ programs });
   } catch (error: any) {
     console.error('Erro ao buscar programas:', error);
-    console.error('Erro completo:', JSON.stringify(error, null, 2));
     return NextResponse.json(
-      { 
+      {
         error: error.message || 'Erro ao buscar programas de treino',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
@@ -40,14 +43,15 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/programs
- * Cria um novo programa de treino (vinculado ao usuário logado).
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    const userId = session?.user?.id ?? null;
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
 
     const body = await request.json();
     const { name, description, startDate, scheduledWorkouts } = body;
@@ -59,31 +63,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar dados antes de criar
-    console.log('Dados recebidos:', { name, description, startDate, scheduledWorkoutsCount: scheduledWorkouts?.length });
-
-    // Criar programa com treinos agendados (e userId se logado)
-    const programData: any = {
-      name,
-      description: description || null,
-      startDate: startDate ? new Date(startDate) : new Date(),
-      ...(userId ? { userId } : {}),
-    };
-
-    // Adicionar scheduledWorkouts apenas se houver dados
-    if (scheduledWorkouts && scheduledWorkouts.length > 0) {
-      programData.scheduledWorkouts = {
-        create: scheduledWorkouts.map((sw: any) => ({
-          template: sw.template,
-          dayOfWeek: sw.dayOfWeek,
-          weekNumber: sw.weekNumber || 1,
-          order: sw.order || 0,
-        })),
-      };
-    }
-
     const program = await prisma.workoutProgram.create({
-      data: programData,
+      data: {
+        name,
+        description: description || null,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        userId, // sempre vincula ao usuário logado
+        scheduledWorkouts: {
+          create: scheduledWorkouts.map((sw: any) => ({
+            template: sw.template,
+            dayOfWeek: sw.dayOfWeek,
+            weekNumber: sw.weekNumber || 1,
+            order: sw.order || 0,
+          })),
+        },
+      },
       include: {
         scheduledWorkouts: {
           orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }, { order: 'asc' }],
@@ -94,9 +88,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ program }, { status: 201 });
   } catch (error: any) {
     console.error('Erro ao criar programa:', error);
-    console.error('Stack trace:', error.stack);
     return NextResponse.json(
-      { 
+      {
         error: error.message || 'Erro ao criar programa de treino',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
@@ -104,4 +97,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
