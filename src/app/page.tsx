@@ -31,6 +31,7 @@ async function getStats(userId: string | null) {
         avgWeeklyWorkouts: 0,
         weightTrend: null,
         thisMonthAvgWeight: null,
+        streak: 0,
       };
     }
 
@@ -150,6 +151,36 @@ async function getStats(userId: string | null) {
       thisMonthAvgWeight != null && lastMonthAvgWeight != null
         ? thisMonthAvgWeight - lastMonthAvgWeight
         : null;
+          // Calcular streak de dias consecutivos treinando
+    const allWorkoutDates = await prisma.workout.findMany({
+      where: userWhere,
+      select: { date: true },
+      orderBy: { date: 'desc' },
+    });
+
+    // Conjunto de dias únicos com treino (formato YYYY-MM-DD)
+    const trainingDays = new Set(
+      allWorkoutDates.map((w) =>
+        new Date(w.date).toISOString().split('T')[0]
+      )
+    );
+
+    // Contar dias consecutivos até hoje
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i <= 365; i++) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      const key = day.toISOString().split('T')[0];
+      if (trainingDays.has(key)) {
+        streak++;
+      } else {
+        break; // Quebrou a sequência
+      }
+    }
+
 
     return {
       recentWorkouts,
@@ -164,7 +195,9 @@ async function getStats(userId: string | null) {
       avgWeeklyWorkouts,
       weightTrend,
       thisMonthAvgWeight,
+      streak, // <<< NOVO
     };
+
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
     return {
@@ -180,6 +213,7 @@ async function getStats(userId: string | null) {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
+      streak: 0,
     };
   }
 }
@@ -248,6 +282,7 @@ export default async function Home() {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
+      streak: 0,
     };
   }
 
@@ -412,6 +447,58 @@ export default async function Home() {
               Últimas 4 semanas
             </div>
           </div>
+
+          {/* Streak */}
+          <div
+            className="card-neon"
+            style={{
+              padding: '32px',
+              ...(stats.streak >= 3 && {
+                border: '2px solid #f59e0b',
+                background: 'rgba(245, 158, 11, 0.05)',
+              }),
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-3xl">
+                {stats.streak === 0 ? '😴' : stats.streak >= 30 ? '🏆' : stats.streak >= 14 ? '⚡' : stats.streak >= 7 ? '🔥' : '✨'}
+              </div>
+              {stats.streak >= 7 && (
+                <div
+                  className="text-xs font-semibold px-2 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    color: '#f59e0b',
+                  }}
+                >
+                  {stats.streak >= 30 ? 'Lendário!' : stats.streak >= 14 ? 'Incrível!' : 'Em chamas!'}
+                </div>
+              )}
+            </div>
+            <div
+              className="text-3xl font-bold mb-2 text-glow"
+              style={{
+                color: stats.streak === 0
+                  ? 'var(--text-muted)'
+                  : stats.streak >= 7
+                  ? '#f59e0b'
+                  : 'var(--accent-success)',
+              }}
+            >
+              {stats.streak} {stats.streak === 1 ? 'dia' : 'dias'}
+            </div>
+            <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Sequência
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {stats.streak === 0
+                ? 'Treine hoje para começar!'
+                : stats.streak === 1
+                ? 'Começou hoje, continue!'
+                : `${stats.streak} dias seguidos 💪`}
+            </div>
+          </div>
+
 
           {/* Tendência de Peso */}
           {stats.weightTrend !== null ? (
