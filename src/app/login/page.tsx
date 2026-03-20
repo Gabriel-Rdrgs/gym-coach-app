@@ -7,124 +7,192 @@ import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
-
-  // Estado do formulário
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-
-  // Estado de UI
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Submissão do formulário principal
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault() // Impede o reload da página
+    e.preventDefault()
     setLoading(true)
     setError(null)
 
     const result = await signIn("credentials", {
       email,
       password,
-      redirect: false, // Não redireciona automaticamente — tratamos o resultado aqui
+      redirect: false,
     })
 
     if (result?.error) {
-      // NextAuth retorna "CredentialsSignin" quando o authorize retorna null
       setError("Email ou senha incorretos. Verifique suas credenciais.")
       setLoading(false)
       return
     }
 
-    // Login bem-sucedido — redireciona para o dashboard
     router.push("/")
-    router.refresh() // Força o Server Component (page.tsx) a re-renderizar com a sessão
+    router.refresh()
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-8">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ background: 'var(--bg-dark)' }}
+    >
+      {/* Efeito de fundo: círculos de brilho */}
+      <div
+        className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 217, 255, 0.08) 0%, transparent 70%)',
+        }}
+      />
+      <div
+        className="absolute bottom-[-200px] right-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(167, 139, 250, 0.08) 0%, transparent 70%)',
+        }}
+      />
 
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            💪 Gym Coach
-          </h2>
-          <p className="mt-2 text-gray-600">Entre com sua conta</p>
-        </div>
+      <div className="w-full max-w-md relative z-10">
 
-        {/* Formulário principal */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Sua senha"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          {/* Mensagem de erro */}
-          {error && (
-            <p className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-lg">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        {/* Logo e título */}
+        <div className="text-center mb-12">
+          <div className="text-6xl mb-6">💪</div>
+          <h1
+            className="text-5xl font-bold mb-3 text-glow"
+            style={{
+              color: 'var(--accent-primary)',
+              fontFamily: 'var(--font-orbitron), sans-serif',
+              letterSpacing: '3px',
+            }}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                Entrando...
-              </span>
-            ) : (
-              "Entrar"
-            )}
-          </button>
-        </form>
-
-        {/* Separador */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">ou</span>
-          </div>
+            GYM COACH
+          </h1>
+          <p
+            className="text-base font-light tracking-widest uppercase"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Seu Personal Trainer Digital
+          </p>
         </div>
-        {/* Link para cadastro */}
-        <p className="text-center text-sm text-gray-600">
-          Não tem uma conta?{" "}
-          <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
-            Criar conta
-          </Link>
+
+        {/* Card do formulário */}
+        <div
+          className="card-neon"
+          style={{ padding: '48px' }}
+        >
+          <h2
+            className="text-2xl font-bold mb-8 text-center"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Entrar na sua conta
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Senha */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Senha
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Sua senha"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Mensagem de erro */}
+            {error && (
+              <div
+                className="p-4 rounded-lg text-sm text-center"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#f87171',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Botão de entrar */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-3">
+                  <span
+                    className="h-5 w-5 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }}
+                  />
+                  Entrando...
+                </span>
+              ) : (
+                "Entrar"
+              )}
+            </button>
+          </form>
+
+          {/* Divisor */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px" style={{ background: 'rgba(0, 217, 255, 0.2)' }} />
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>ou</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(0, 217, 255, 0.2)' }} />
+          </div>
+
+          {/* Link para cadastro */}
+          <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            Não tem uma conta?{" "}
+            <Link
+              href="/signup"
+              className="font-semibold transition-all hover:underline"
+              style={{ color: 'var(--accent-secondary)' }}
+            >
+              Criar conta grátis →
+            </Link>
+          </p>
+        </div>
+
+        {/* Rodapé */}
+        <p
+          className="text-center text-xs mt-8"
+          style={{ color: 'var(--text-muted)', opacity: 0.5 }}
+        >
+          © {new Date().getFullYear()} Gym Coach · Todos os direitos reservados
         </p>
+
       </div>
     </div>
   )

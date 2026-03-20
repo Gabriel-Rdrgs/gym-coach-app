@@ -8,50 +8,17 @@ interface NavItem {
   name: string;
   href: string;
   icon: string;
-  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
-  {
-    name: 'Dashboard',
-    href: '/',
-    icon: '📊',
-  },
-  {
-    name: 'Treinos',
-    href: '/workouts',
-    icon: '🏋️',
-  },
-  {
-    name: 'Exercícios',
-    href: '/exercises',
-    icon: '💪',
-  },
-  {
-    name: 'Métricas',
-    href: '/metrics',
-    icon: '📊',
-  },
-  {
-    name: 'Progresso',
-    href: '/progress',
-    icon: '📈',
-  },
-  {
-    name: 'PRs',
-    href: '/prs',
-    icon: '🏆',
-  },
-  {
-    name: 'Programas',
-    href: '/programs',
-    icon: '📅',
-  },
-  {
-    name: 'Dieta',
-    href: '/diet',
-    icon: '🥗',
-  },
+  { name: 'Dashboard', href: '/', icon: '📊' },
+  { name: 'Treinos', href: '/workouts', icon: '🏋️' },
+  { name: 'Exercícios', href: '/exercises', icon: '💪' },
+  { name: 'Métricas', href: '/metrics', icon: '📊' },
+  { name: 'Progresso', href: '/progress', icon: '📈' },
+  { name: 'PRs', href: '/prs', icon: '🏆' },
+  { name: 'Programas', href: '/programs', icon: '📅' },
+  { name: 'Dieta', href: '/diet', icon: '🥗' },
 ];
 
 interface SidebarProps {
@@ -64,7 +31,6 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Aplicar classe ao main para ajustar o layout
     const main = document.querySelector('main');
     if (main) {
       if (isOpen) {
@@ -78,15 +44,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   }, [isOpen]);
 
   const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
-    }
+    if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
   return (
     <>
-      {/* Mobile Toggle Button - Abrir Sidebar */}
+      {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="fixed top-20 left-4 z-50 lg:hidden p-3 rounded-lg border-2 transition-all hover:scale-110"
@@ -118,17 +82,17 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
-          top: '80px', // Começa abaixo do header
+          top: '80px',
           left: 0,
           bottom: 0,
-          height: 'calc(100vh - 80px)', // Altura menos o header
+          height: 'calc(100vh - 80px)',
           background: 'var(--bg-card)',
           borderRight: '2px solid var(--accent-primary)',
           boxShadow: '4px 0 20px rgba(0, 217, 255, 0.2)',
         }}
       >
         {/* Navigation Items */}
-        <nav className="p-6 space-y-4 overflow-y-auto flex-1" style={{ paddingBottom: '120px' }}>
+        <nav className="p-6 space-y-4 overflow-y-auto flex-1" style={{ paddingBottom: '160px' }}>
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -151,14 +115,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               >
                 <span className="text-2xl flex-shrink-0">{item.icon}</span>
                 {isOpen && (
-                  <span className="font-semibold text-base whitespace-nowrap">{item.name}</span>
+                  <span className="font-semibold text-base whitespace-nowrap">
+                    {item.name}
+                  </span>
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer com Botão de Toggle */}
+        {/* Sidebar Footer */}
         <div
           className="absolute bottom-0 left-0 right-0 border-t"
           style={{
@@ -166,18 +132,38 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             background: 'var(--bg-card)',
           }}
         >
+          {/* Link de Perfil */}
+          <Link
+            href="/profile"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center gap-4 px-5 py-4 transition-all hover:bg-purple-500/10"
+            style={{
+              color: isActive('/profile')
+                ? 'var(--accent-secondary)'
+                : 'var(--text-muted)',
+              borderBottom: '1px solid rgba(0, 217, 255, 0.1)',
+            }}
+          >
+            <span className="text-2xl flex-shrink-0">👤</span>
+            {isOpen && (
+              <span className="font-semibold text-sm whitespace-nowrap">
+                Perfil
+              </span>
+            )}
+          </Link>
+
           {/* Botão de Toggle */}
           <button
             onClick={onToggle}
             className="w-full p-4 flex items-center justify-center gap-3 transition-all hover:bg-cyan-500/10"
-            style={{
-              color: 'var(--accent-primary)',
-            }}
+            style={{ color: 'var(--accent-primary)' }}
             title={isOpen ? 'Recolher sidebar' : 'Expandir sidebar'}
           >
             <span className="text-xl flex-shrink-0">{isOpen ? '◀' : '▶'}</span>
             {isOpen && (
-              <span className="text-sm font-semibold whitespace-nowrap">Recolher</span>
+              <span className="text-sm font-semibold whitespace-nowrap">
+                Recolher
+              </span>
             )}
           </button>
 
@@ -185,17 +171,13 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {isOpen && (
             <div
               className="px-4 pb-3 text-center text-xs"
-              style={{
-                color: 'var(--text-muted)',
-              }}
+              style={{ color: 'var(--text-muted)' }}
             >
               v1.0.0
             </div>
           )}
         </div>
       </aside>
-
     </>
   );
 }
-

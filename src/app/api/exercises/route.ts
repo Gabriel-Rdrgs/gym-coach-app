@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const exercises = await prisma.exercise.findMany({
       orderBy: { muscleGroup: 'asc' },
     });
@@ -16,4 +23,3 @@ export async function GET() {
     );
   }
 }
-

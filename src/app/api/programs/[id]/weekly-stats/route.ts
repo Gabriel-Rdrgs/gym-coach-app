@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import {
   calculateWeeklyValidSetsByMuscleGroup,
   validateOMSRecommendations,
@@ -7,16 +8,19 @@ import {
   getWeekNumber,
 } from '@/lib/program-utils';
 
-/**
- * GET /api/programs/[id]/weekly-stats
- * Calcula estatísticas semanais de séries válidas por grupo muscular
- * e valida conforme recomendações OMS (10-20 séries válidas/semana)
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
     const { id } = await params;
     const programId = parseInt(id);
     const { searchParams } = new URL(request.url);
@@ -26,14 +30,14 @@ export async function GET(
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    // Determinar período da semana
     const weekRange = weekStart
       ? getWeekRange(new Date(weekStart))
       : getWeekRange();
 
-    // Buscar treinos da semana
+    // Buscar treinos da semana APENAS do usuário logado
     const workouts = await prisma.workout.findMany({
       where: {
+        userId, // <- filtro por usuário
         date: {
           gte: weekRange.start,
           lte: weekRange.end,
@@ -49,7 +53,6 @@ export async function GET(
       },
     });
 
-    // Formatar treinos para cálculo
     const formattedWorkouts = workouts.map((workout) => ({
       date: workout.date,
       exercises: workout.exercises.map((ex) => ({
@@ -66,13 +69,8 @@ export async function GET(
       })),
     }));
 
-    // Calcular séries válidas por grupo muscular
     const validSetsByGroup = calculateWeeklyValidSetsByMuscleGroup(formattedWorkouts);
-
-    // Validar conforme recomendações OMS
     const omsStatus = validateOMSRecommendations(validSetsByGroup);
-
-    // Buscar ou criar registro da semana no programa
     const weekNumber = getWeekNumber(weekRange.start);
 
     await prisma.programWeek.upsert({
@@ -115,4 +113,3 @@ export async function GET(
     );
   }
 }
-
