@@ -282,15 +282,7 @@ const WorkoutCard = memo(({
               min="0"
               placeholder="0"
               value={set.weight === 0 ? '' : set.weight}
-              onChange={(e) => {
-                const input = e.target;
-                const cursorPosition = input.selectionStart || 0;
-                handleWeightChange(setIndex, e);
-                setTimeout(() => {
-                  input.focus();
-                  input.setSelectionRange(cursorPosition, cursorPosition);
-                }, 0);
-              }}
+              onChange={(e) => handleWeightChange(setIndex, e)}
               onBlur={(e) => {
                 if (e.target.value === '') {
                   updateSet(index, setIndex, 'weight', 0);
@@ -310,15 +302,7 @@ const WorkoutCard = memo(({
               min="0"
               placeholder="0"
               value={set.reps === 0 ? '' : set.reps}
-              onChange={(e) => {
-                const input = e.target;
-                const cursorPosition = input.selectionStart || 0;
-                handleRepsChange(setIndex, e);
-                setTimeout(() => {
-                  input.focus();
-                  input.setSelectionRange(cursorPosition, cursorPosition);
-                }, 0);
-              }}
+              onChange={(e) => handleRepsChange(setIndex, e)}
               onBlur={(e) => {
                 if (e.target.value === '') {
                   updateSet(index, setIndex, 'reps', 0);
@@ -340,15 +324,7 @@ const WorkoutCard = memo(({
               max="5"
               placeholder="0"
               value={set.rir === undefined ? '' : set.rir}
-              onChange={(e) => {
-                const input = e.target;
-                const cursorPosition = input.selectionStart || 0;
-                handleRirChange(setIndex, e);
-                setTimeout(() => {
-                  input.focus();
-                  input.setSelectionRange(cursorPosition, cursorPosition);
-                }, 0);
-              }}
+              onChange={(e) => handleRirChange(setIndex, e)}
               onBlur={(e) => {
                 if (e.target.value === '') {
                   updateSet(index, setIndex, 'rir', undefined);

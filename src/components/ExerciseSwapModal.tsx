@@ -63,9 +63,9 @@ export default function ExerciseSwapModal({
 
       if (mode === "swap") {
         // MODO TROCAR: continua usando a lógica antiga
-        url = `/api/exercises/alternatives?name=${encodeURIComponent(
-          currentExercise.name
-        )}`;
+      url = `/api/exercises/alternatives?exerciseName=${encodeURIComponent(
+        currentExercise.name
+      )}`;
       } else {
         // MODO ADICIONAR: usa a lista geral de exercícios
         url = `/api/exercises`; // <<< usa a rota que você já tem [file:31]
