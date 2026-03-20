@@ -554,6 +554,78 @@ export default async function Home() {
             </div>
           )}
         </div>
+                {/* Indicador de Progresso Semanal */}
+        {(() => {
+          const meta = 100// séries válidas semanais
+          const atual = stats.thisWeekValidSets;
+          const percentual = Math.min((atual / meta) * 100, 100);
+          const faltam = Math.max(meta - atual, 0);
+
+          const cor =
+            percentual >= 100 ? 'var(--accent-success)' :
+            percentual >= 60  ? 'var(--accent-primary)' :
+            percentual >= 30  ? 'var(--accent-secondary)' :
+            'var(--accent-warning)';
+
+          const mensagem =
+            percentual >= 100 ? '🏆 Meta semanal atingida! Excelente trabalho!' :
+            percentual >= 60  ? `💪 Quase lá! Faltam ${faltam.toFixed(1)} séries válidas.` :
+            percentual >= 30  ? `📈 Bom começo! Faltam ${faltam.toFixed(1)} séries válidas.` :
+            `🎯 Faltam ${faltam.toFixed(1)} séries válidas para atingir a meta.`;
+
+          return (
+            <div className="card-neon mb-12 md:mb-16 lg:mb-20" style={{ padding: '32px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className="text-lg font-bold"
+                  style={{ color: 'var(--accent-primary)' }}
+                >
+                  🎯 Progresso Semanal
+                </h3>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: cor }}
+                >
+                  {atual.toFixed(1)} / {meta} séries válidas
+                </span>
+              </div>
+
+              {/* Barra de progresso */}
+              <div
+                className="w-full rounded-full mb-4 overflow-hidden"
+                style={{
+                  height: '12px',
+                  background: 'rgba(0, 217, 255, 0.1)',
+                  border: '1px solid rgba(0, 217, 255, 0.2)',
+                }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${percentual}%`,
+                    background: percentual >= 100
+                      ? 'linear-gradient(90deg, var(--accent-success), #34d399)'
+                      : `linear-gradient(90deg, ${cor}, rgba(0, 217, 255, 0.6))`,
+                    boxShadow: `0 0 10px ${cor}`,
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {mensagem}
+                </p>
+                <span
+                  className="text-sm font-bold ml-4 flex-shrink-0"
+                  style={{ color: cor }}
+                >
+                  {percentual.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
 
         {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
