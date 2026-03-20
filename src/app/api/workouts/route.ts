@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     const body = await request.json();
-    const { template, notes, exercises } = body;
+    const { template, notes, exercises, date } = body; // <<< NOVO: extrair date do body
 
     if (!template || !exercises || exercises.length === 0) {
       return NextResponse.json(
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
         userId,
         template,
         notes: notes || null,
+        date: date ? new Date(date) : new Date(), // <<< NOVO: usa a data enviada ou hoje
         exercises: {
           create: await Promise.all(
             exercises.map(async (ex: any) => {
-              // Buscar o exercício pelo nome
               const exercise = await prisma.exercise.findUnique({
                 where: { name: ex.exerciseName } as any,
               });
@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
       });
 
       if (exercise) {
-        // Encontrar o maior peso e reps para este exercício no treino
         const sets = ex.sets.filter((s: any) => s.weight > 0 && s.reps > 0);
         if (sets.length > 0) {
           const maxWeightSet = sets.reduce((max: any, set: any) =>
@@ -155,5 +154,3 @@ export async function GET() {
     );
   }
 }
-
-

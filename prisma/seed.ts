@@ -146,15 +146,14 @@ async function main() {
   console.log("🌱 Iniciando seed do banco de dados...");
 
   try {
-    await Promise.all(
-      exercises.map(async (ex) => {
-        await prisma.exercise.upsert({
-          where: { name: ex.name } as any,
-          update: ex,
-          create: ex,
-        });
-      })
-    );
+    // Processar em sequência para não estourar o pool de conexões
+    for (const ex of exercises) {
+      await prisma.exercise.upsert({
+        where: { name: ex.name } as any,
+        update: ex,
+        create: ex,
+      });
+    }
 
     console.log(`✅ ${exercises.length} exercícios processados.`);
     console.log(`🎉 Seed concluído com sucesso!`);
@@ -163,6 +162,7 @@ async function main() {
     throw error;
   }
 }
+
 
 main()
   .then(async () => {

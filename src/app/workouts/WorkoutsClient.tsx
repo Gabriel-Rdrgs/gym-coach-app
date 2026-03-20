@@ -34,6 +34,9 @@ export default function WorkoutsClient() {
   const [swapExerciseIndex, setSwapExerciseIndex] = useState<number | null>(null);
   const toast = useToast();
   const [addingExercise, setAddingExercise] = useState(false); // <<< NOVO
+  const [workoutDate, setWorkoutDate] = useState( // <<< NOVO
+    new Date().toISOString().split('T')[0] // data de hoje no formato YYYY-MM-DD
+  );
 
 
   const handleProgramSelect = (program: keyof typeof workoutPrograms) => {
@@ -66,7 +69,9 @@ export default function WorkoutsClient() {
     setSelectedTemplate('');
     setCurrentWorkout([]);
     setNotes('');
+    setWorkoutDate(new Date().toISOString().split('T')[0]); // <<< NOVO
   };
+
 
   const updateSet = useCallback((exerciseIndex: number, setIndex: number, field: keyof SetData, value: number | undefined) => {
     setCurrentWorkout((prev) => {
@@ -140,6 +145,7 @@ export default function WorkoutsClient() {
         body: JSON.stringify({
           template: selectedTemplate,
           notes: notes || null,
+          date: workoutDate, // <<< NOVO
           exercises: currentWorkout.map((ex, idx) => ({
             exerciseName: ex.name,
             order: idx + 1,
@@ -300,18 +306,33 @@ export default function WorkoutsClient() {
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
 
-        <div className="mb-10">
-          <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
-            Notas do treino (opcional)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Adicione notas sobre o treino..."
-            className="input-neon w-full"
-            rows={3}
-          />
+        <div className="grid md:grid-cols-2 gap-6 mb-10">
+          <div>
+            <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
+              📅 Data do treino
+            </label>
+            <input
+              type="date"
+              value={workoutDate}
+              max={new Date().toISOString().split('T')[0]} // não permite data futura
+              onChange={(e) => setWorkoutDate(e.target.value)}
+              className="input-neon w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
+              📝 Notas do treino (opcional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Adicione notas sobre o treino..."
+              className="input-neon w-full"
+              rows={3}
+            />
+          </div>
         </div>
+
 
         {/* Espaçamento vertical */}
         <div style={{ height: '24px' }}></div>
