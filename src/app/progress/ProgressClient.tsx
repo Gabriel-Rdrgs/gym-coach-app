@@ -111,12 +111,15 @@ const CHART_COLORS = [
 
 // Função auxiliar para formatar datas
 const formatDate = (dateString: string) => {
+  if (!dateString) return '--';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '--';
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
   }).format(date);
 };
+
 
 // Função para calcular semana do ano
 const getWeekOfYear = (date: Date): string => {
