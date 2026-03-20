@@ -19,7 +19,6 @@ export default function SignupPage() {
     e.preventDefault()
     setError(null)
 
-    // Validação no cliente antes de ir ao servidor
     if (password !== confirmPassword) {
       setError("As senhas não coincidem.")
       return
@@ -32,7 +31,6 @@ export default function SignupPage() {
 
     setLoading(true)
 
-    // 1. Cria a conta no banco via nossa API
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -42,13 +40,11 @@ export default function SignupPage() {
     const data = await res.json()
 
     if (!res.ok) {
-      // A API retorna { error: "mensagem" } em caso de falha
       setError(data.error || "Erro ao criar conta. Tente novamente.")
       setLoading(false)
       return
     }
 
-    // 2. Conta criada com sucesso — faz login automático
     const result = await signIn("credentials", {
       email,
       password,
@@ -56,124 +52,217 @@ export default function SignupPage() {
     })
 
     if (result?.error) {
-      // Conta foi criada mas o login falhou (improvável, mas tratamos assim mesmo)
       setError("Conta criada! Mas ocorreu um erro ao fazer login. Tente entrar manualmente.")
       setLoading(false)
       return
     }
 
-    // 3. Tudo certo — vai para o dashboard
     router.push("/")
     router.refresh()
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 space-y-8">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ background: 'var(--bg-dark)' }}
+    >
+      {/* Efeitos de fundo */}
+      <div
+        className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(167, 139, 250, 0.08) 0%, transparent 70%)',
+        }}
+      />
+      <div
+        className="absolute bottom-[-200px] right-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(0, 217, 255, 0.08) 0%, transparent 70%)',
+        }}
+      />
 
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            💪 Gym Coach
-          </h2>
-          <p className="mt-2 text-gray-600">Crie sua conta gratuita</p>
+      <div className="w-full max-w-md relative z-10">
+
+        {/* Logo e título */}
+        <div className="text-center mb-10">
+          <div className="text-6xl mb-6">💪</div>
+          <h1
+            className="text-5xl font-bold mb-3 text-glow"
+            style={{
+              color: 'var(--accent-primary)',
+              fontFamily: 'var(--font-orbitron), sans-serif',
+              letterSpacing: '3px',
+            }}
+          >
+            GYM COACH
+          </h1>
+          <p
+            className="text-base font-light tracking-widest uppercase"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Crie sua conta gratuita
+          </p>
         </div>
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nome
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Seu nome completo"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirmar Senha
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repita sua senha"
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-lg">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        {/* Card do formulário */}
+        <div className="card-neon" style={{ padding: '48px' }}>
+          <h2
+            className="text-2xl font-bold mb-8 text-center"
+            style={{ color: 'var(--text-primary)' }}
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                Criando conta...
-              </span>
-            ) : (
-              "Criar Conta"
-            )}
-          </button>
-        </form>
+            Criar nova conta
+          </h2>
 
-        {/* Link para login */}
-        <p className="text-center text-sm text-gray-600">
-          Já tem uma conta?{" "}
-          <Link href="/login" className="text-blue-600 font-semibold hover:underline">
-            Entrar
-          </Link>
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Nome */}
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Nome
+              </label>
+              <input
+                id="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Seu nome completo"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Senha */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Senha
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Confirmar Senha */}
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Confirmar Senha
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita sua senha"
+                className="input-neon w-full"
+              />
+            </div>
+
+            {/* Mensagem de erro */}
+            {error && (
+              <div
+                className="p-4 rounded-lg text-sm text-center"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  color: '#f87171',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Botão de criar conta */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-4 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-3">
+                  <span
+                    className="h-5 w-5 rounded-full border-2 animate-spin"
+                    style={{
+                      borderColor: 'var(--accent-primary)',
+                      borderTopColor: 'transparent',
+                    }}
+                  />
+                  Criando conta...
+                </span>
+              ) : (
+                "Criar Conta"
+              )}
+            </button>
+          </form>
+
+          {/* Divisor */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px" style={{ background: 'rgba(0, 217, 255, 0.2)' }} />
+            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>ou</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(0, 217, 255, 0.2)' }} />
+          </div>
+
+          {/* Link para login */}
+          <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+            Já tem uma conta?{" "}
+            <Link
+              href="/login"
+              className="font-semibold transition-all hover:underline"
+              style={{ color: 'var(--accent-secondary)' }}
+            >
+              Entrar →
+            </Link>
+          </p>
+        </div>
+
+        {/* Rodapé */}
+        <p
+          className="text-center text-xs mt-8"
+          style={{ color: 'var(--text-muted)', opacity: 0.5 }}
+        >
+          © {new Date().getFullYear()} Gym Coach · Todos os direitos reservados
         </p>
+
       </div>
     </div>
   )

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import NewProgramClient from "./NewProgramClient";
+import ProfileClient from "./ProfileClient";
 
-export default async function NewProgramPage() {
+export default async function ProfilePage() {
   let session = null;
 
   try {
@@ -15,5 +15,5 @@ export default async function NewProgramPage() {
     redirect("/login");
   }
 
-  return <NewProgramClient />;
+  return <ProfileClient />;
 }
