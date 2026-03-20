@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { name: 'Exercícios', href: '/exercises', icon: '💪' },
   { name: 'Métricas', href: '/metrics', icon: '📊' },
   { name: 'Progresso', href: '/progress', icon: '📈' },
+  { name: 'Evolução', href: '/progress/exercise', icon: '🔬' },
   { name: 'PRs', href: '/prs', icon: '🏆' },
   { name: 'Programas', href: '/programs', icon: '📅' },
   { name: 'Dieta', href: '/diet', icon: '🥗' },
