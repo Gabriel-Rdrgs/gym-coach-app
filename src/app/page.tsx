@@ -309,10 +309,24 @@ export default async function Home() {
             Dashboard
           </h1>
           <p 
-            className="text-xl font-light"
+            className="text-xl font-light mb-2"
             style={{ color: 'var(--text-muted)' }}
           >
             Seu Personal Trainer Digital
+          </p>
+          <p
+            className="text-lg font-medium"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting =
+                hour < 12 ? 'Bom dia' :
+                hour < 18 ? 'Boa tarde' :
+                'Boa noite';
+              const name = session.user.name?.split(' ')[0] ?? 'Atleta';
+              return `${greeting}, ${name}! 👋`;
+            })()}
           </p>
         </div>
 
