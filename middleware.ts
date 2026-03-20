@@ -1,4 +1,4 @@
-/*import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
@@ -11,9 +11,11 @@ export async function middleware(req: NextRequest) {
 
   const isPublicRoute =
     pathname.startsWith("/login") ||
+    pathname.startsWith("/signup") ||        // <<< NOVO
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico";
+
 
   let token = null;
 
@@ -55,4 +57,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-*\
