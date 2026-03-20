@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { workoutTemplates, workoutPrograms } from '@/data/templates';
 import ExerciseSwapModal from '@/components/ExerciseSwapModal';
 import WorkoutCard from '@/components/WorkoutCard';
@@ -19,7 +19,7 @@ interface SetData {
 interface ExerciseData {
   name: string;
   muscleGroup: string;
-  type?: string; // compound ou isolation
+  type?: string;
   sets: SetData[];
 }
 
@@ -33,12 +33,31 @@ export default function WorkoutsClient() {
   const [swapModalOpen, setSwapModalOpen] = useState(false);
   const [swapExerciseIndex, setSwapExerciseIndex] = useState<number | null>(null);
   const toast = useToast();
-  const [addingExercise, setAddingExercise] = useState(false); // <<< NOVO
-  const [workoutDate, setWorkoutDate] = useState( // <<< NOVO
-    new Date().toISOString().split('T')[0] // data de hoje no formato YYYY-MM-DD
+  const [addingExercise, setAddingExercise] = useState(false);
+  const [workoutDate, setWorkoutDate] = useState(
+    new Date().toISOString().split('T')[0]
   );
-  const [isFreeworkout, setIsFreeWorkout] = useState(false); // <<< NOVO
-  const [freeWorkoutName, setFreeWorkoutName] = useState(''); // <<< NOVO
+  const [isFreeworkout, setIsFreeWorkout] = useState(false);
+  const [freeWorkoutName, setFreeWorkoutName] = useState('');
+  const [showExitConfirm, setShowExitConfirm] = useState(false); // <<< NOVO
+
+  // Bloquear fechamento de aba com dados preenchidos
+  useEffect(() => {
+    if (!showForm) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasData = currentWorkout.some((ex) =>
+        ex.sets.some((s) => s.weight > 0 || s.reps > 0)
+      );
+      if (!hasData) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [showForm, currentWorkout]);
+
   const handleProgramSelect = (program: keyof typeof workoutPrograms) => {
     setSelectedProgram(program);
   };
@@ -46,7 +65,6 @@ export default function WorkoutsClient() {
   const handleTemplateSelect = (template: string) => {
     setSelectedTemplate(template);
     const exercises = workoutTemplates[template as keyof typeof workoutTemplates];
-    // Inicializar cada exercício com 3 séries vazias
     const workoutWithSets: ExerciseData[] = exercises.map((ex) => ({
       ...ex,
       type: getExerciseType(ex.name),
@@ -64,7 +82,17 @@ export default function WorkoutsClient() {
     setSelectedProgram(null);
   };
 
-  const handleBackToTemplates = () => {
+  // Versão com confirmação
+  const handleBackToTemplates = (force = false) => {
+    const hasData = currentWorkout.some((ex) =>
+      ex.sets.some((s) => s.weight > 0 || s.reps > 0)
+    );
+
+    if (hasData && !force) {
+      setShowExitConfirm(true);
+      return;
+    }
+
     setShowForm(false);
     setSelectedTemplate('');
     setCurrentWorkout([]);
@@ -72,21 +100,18 @@ export default function WorkoutsClient() {
     setWorkoutDate(new Date().toISOString().split('T')[0]);
     setIsFreeWorkout(false);
     setFreeWorkoutName('');
+    setShowExitConfirm(false);
   };
-
-
 
   const updateSet = useCallback((exerciseIndex: number, setIndex: number, field: keyof SetData, value: number | undefined) => {
     setCurrentWorkout((prev) => {
       const updatedWorkout = [...prev];
       updatedWorkout[exerciseIndex] = {
         ...updatedWorkout[exerciseIndex],
-        sets: updatedWorkout[exerciseIndex].sets.map((set, idx) => 
-          idx === setIndex 
-            ? { ...set, [field]: value }
-            : set
+        sets: updatedWorkout[exerciseIndex].sets.map((set, idx) =>
+          idx === setIndex ? { ...set, [field]: value } : set
         ),
-    };
+      };
       return updatedWorkout;
     });
   }, []);
@@ -94,17 +119,12 @@ export default function WorkoutsClient() {
   const addSet = useCallback((exerciseIndex: number) => {
     setCurrentWorkout((prev) => {
       const updatedWorkout = [...prev];
-    const newSetNumber = updatedWorkout[exerciseIndex].sets.length + 1;
+      const newSetNumber = updatedWorkout[exerciseIndex].sets.length + 1;
       updatedWorkout[exerciseIndex] = {
         ...updatedWorkout[exerciseIndex],
         sets: [
           ...updatedWorkout[exerciseIndex].sets,
-          {
-      setNumber: newSetNumber,
-      weight: 0,
-      reps: 0,
-      rir: undefined,
-          },
+          { setNumber: newSetNumber, weight: 0, reps: 0, rir: undefined },
         ],
       };
       return updatedWorkout;
@@ -114,28 +134,28 @@ export default function WorkoutsClient() {
   const removeSet = useCallback((exerciseIndex: number, setIndex: number) => {
     setCurrentWorkout((prev) => {
       const updatedWorkout = [...prev];
-    if (updatedWorkout[exerciseIndex].sets.length > 1) {
+      if (updatedWorkout[exerciseIndex].sets.length > 1) {
         updatedWorkout[exerciseIndex] = {
           ...updatedWorkout[exerciseIndex],
           sets: updatedWorkout[exerciseIndex].sets
             .filter((_, idx) => idx !== setIndex)
-            .map((set, idx) => ({
-              ...set,
-              setNumber: idx + 1,
-            })),
+            .map((set, idx) => ({ ...set, setNumber: idx + 1 })),
         };
       }
       return updatedWorkout;
     });
   }, []);
-  const removeExercise = useCallback((exerciseIndex: number) => { 
+
+  const removeExercise = useCallback((exerciseIndex: number) => {
     setCurrentWorkout((prev) => prev.filter((_, idx) => idx !== exerciseIndex));
   }, []);
+
   const handleAddExerciseClick = () => {
     setAddingExercise(true);
     setSwapExerciseIndex(null);
     setSwapModalOpen(true);
   };
+
   const handleFreeWorkout = () => {
     setIsFreeWorkout(true);
     setSelectedTemplate('Treino Livre');
@@ -143,21 +163,18 @@ export default function WorkoutsClient() {
     setShowForm(true);
   };
 
-
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const response = await fetch('/api/workouts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: isFreeworkout && freeWorkoutName.trim()
             ? freeWorkoutName.trim()
             : selectedTemplate,
           notes: notes || null,
-          date: workoutDate, // <<< NOVO
+          date: workoutDate,
           exercises: currentWorkout.map((ex, idx) => ({
             exerciseName: ex.name,
             order: idx + 1,
@@ -166,24 +183,17 @@ export default function WorkoutsClient() {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Erro ao salvar treino');
-      }
+      if (!response.ok) throw new Error('Erro ao salvar treino');
 
       const data = await response.json();
-      
-      // Mostrar notificações de PRs
+
       if (data.prsDetected && data.prsDetected.length > 0) {
         data.prsDetected.forEach((pr: any) => {
-          toast.success(
-            `🏆 NOVO PR! ${pr.exercise}: ${pr.weight}kg x ${pr.reps} reps!`
-          );
+          toast.success(`🏆 NOVO PR! ${pr.exercise}: ${pr.weight}kg x ${pr.reps} reps!`);
         });
       }
 
       toast.success('Treino salvo com sucesso!');
-      
-      // Reset form
       setSelectedTemplate('');
       setCurrentWorkout([]);
       setShowForm(false);
@@ -198,7 +208,6 @@ export default function WorkoutsClient() {
 
   const handleExerciseSwap = (newExercise: any) => {
     if (swapExerciseIndex !== null) {
-      // Trocar exercício existente
       const updatedWorkout = [...currentWorkout];
       updatedWorkout[swapExerciseIndex] = {
         ...updatedWorkout[swapExerciseIndex],
@@ -208,7 +217,6 @@ export default function WorkoutsClient() {
       };
       setCurrentWorkout(updatedWorkout);
     } else if (addingExercise) {
-      // Adicionar novo exercício ao final
       setCurrentWorkout((prev) => [
         ...prev,
         {
@@ -228,277 +236,271 @@ export default function WorkoutsClient() {
     setAddingExercise(false);
   };
 
-
-  // WorkoutCard removido - agora é um componente separado em @/components/WorkoutCard.tsx
-
   if (showForm) {
     return (
-      <div 
-        className="flex justify-center min-h-screen py-12"
-        onScroll={(e) => {
-          // Prevenir scroll acidental
-          e.stopPropagation();
-        }}
-      >
+      <div className="flex justify-center min-h-screen py-12">
         <div className="w-full max-w-4xl">
-        <div className="mb-12 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-glow mb-3" style={{ color: 'var(--accent-primary)' }}>
-              {selectedTemplate}
-            </h2>
-            <div className="flex items-center gap-4 flex-wrap">
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Preencha os dados do seu treino
-              </p>
-              {currentWorkout.length > 0 && (() => {
-                const timeEstimate = estimateWorkoutTime(currentWorkout);
-                const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
-                
-                // Calcular séries válidas usando a função utilitária
-                const workoutFormatted = {
-                  date: new Date(),
-                  exercises: currentWorkout.map((ex) => ({
-                    exercise: {
-                      muscleGroup: ex.muscleGroup,
-                      name: ex.name,
-                      type: ex.type || 'isolation',
-                    },
-                    sets: ex.sets.map((set) => ({
-                      rir: set.rir ?? null,
-                      weight: set.weight,
-                      reps: set.reps,
+          <div className="mb-12 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-glow mb-3" style={{ color: 'var(--accent-primary)' }}>
+                {selectedTemplate}
+              </h2>
+              <div className="flex items-center gap-4 flex-wrap">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  Preencha os dados do seu treino
+                </p>
+                {currentWorkout.length > 0 && (() => {
+                  const timeEstimate = estimateWorkoutTime(currentWorkout);
+                  const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+                  const workoutFormatted = {
+                    date: new Date(),
+                    exercises: currentWorkout.map((ex) => ({
+                      exercise: {
+                        muscleGroup: ex.muscleGroup,
+                        name: ex.name,
+                        type: ex.type || 'isolation',
+                      },
+                      sets: ex.sets.map((set) => ({
+                        rir: set.rir ?? null,
+                        weight: set.weight,
+                        reps: set.reps,
+                      })),
                     })),
-                  })),
-                };
-                const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
-                const totalValidSets = validSetsResult.totalValidSets;
+                  };
+                  const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
+                  const totalValidSets = validSetsResult.totalValidSets;
 
-                return (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
-                      background: 'rgba(0, 217, 255, 0.1)', 
-                      borderColor: 'var(--accent-primary)' 
-                    }}>
-                      <span className="text-sm" style={{ color: 'var(--accent-primary)' }}>⏱️</span>
-                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-primary)' }}>
-                        {formatWorkoutTime(timeEstimate.totalMinutes)}
-                      </span>
+                  return (
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ background: 'rgba(0, 217, 255, 0.1)', borderColor: 'var(--accent-primary)' }}>
+                        <span className="text-sm" style={{ color: 'var(--accent-primary)' }}>⏱️</span>
+                        <span className="text-sm font-semibold" style={{ color: 'var(--accent-primary)' }}>
+                          {formatWorkoutTime(timeEstimate.totalMinutes)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'var(--accent-success)' }}>
+                        <span className="text-sm" style={{ color: 'var(--accent-success)' }}>✓</span>
+                        <span className="text-sm font-semibold" style={{ color: 'var(--accent-success)' }}>
+                          {totalValidSets.toFixed(1)} séries válidas
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ background: 'rgba(167, 139, 250, 0.1)', borderColor: 'var(--accent-secondary)' }}>
+                        <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>📊</span>
+                        <span className="text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
+                          {totalSets} séries totais
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
-                      background: 'rgba(16, 185, 129, 0.1)', 
-                      borderColor: 'var(--accent-success)' 
-                    }}>
-                      <span className="text-sm" style={{ color: 'var(--accent-success)' }}>✓</span>
-                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-success)' }}>
-                        {totalValidSets.toFixed(1)} séries válidas
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ 
-                      background: 'rgba(167, 139, 250, 0.1)', 
-                      borderColor: 'var(--accent-secondary)' 
-                    }}>
-                      <span className="text-sm" style={{ color: 'var(--accent-secondary)' }}>📊</span>
-                      <span className="text-sm font-semibold" style={{ color: 'var(--accent-secondary)' }}>
-                        {totalSets} séries totais
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
+            </div>
+            <button onClick={() => handleBackToTemplates()} className="btn-secondary">
+              ← Voltar
+            </button>
+          </div>
+
+          {isFreeworkout && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
+                Nome do treino
+              </label>
+              <input
+                type="text"
+                value={freeWorkoutName}
+                onChange={(e) => setFreeWorkoutName(e.target.value)}
+                placeholder="Ex: Peito e Tríceps, Treino de Força..."
+                className="input-neon w-full"
+              />
+            </div>
+          )}
+
+          <div style={{ height: '32px' }}></div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <div>
+              <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
+                📅 Data do treino
+              </label>
+              <input
+                type="date"
+                value={workoutDate}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setWorkoutDate(e.target.value)}
+                className="input-neon w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
+                📝 Notas do treino (opcional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Adicione notas sobre o treino..."
+                className="input-neon w-full"
+                rows={3}
+              />
             </div>
           </div>
+
+          <div style={{ height: '24px' }}></div>
+
+          <div className="space-y-8 mb-10">
+            {currentWorkout.map((exercise, index) => (
+              <WorkoutCard
+                key={`exercise-${index}-${exercise.name}`}
+                exercise={exercise}
+                index={index}
+                updateSet={updateSet}
+                addSet={addSet}
+                removeSet={removeSet}
+                setSwapExerciseIndex={setSwapExerciseIndex}
+                setSwapModalOpen={setSwapModalOpen}
+                onRemoveExercise={() => removeExercise(index)}
+              />
+            ))}
+          </div>
+
           <button
-            onClick={handleBackToTemplates}
-            className="btn-secondary"
+            type="button"
+            onClick={handleAddExerciseClick}
+            className="btn-secondary mb-8"
           >
-            ← Voltar
+            + Adicionar exercício
           </button>
-        </div>
-        {/* Nome customizado — só aparece no treino livre */}
-        {isFreeworkout && (
-          <div className="mb-6">
-            <label
-              className="block text-sm font-medium mb-4"
-              style={{ color: 'var(--accent-primary)' }}
-            >
-              Nome do treino
-            </label>
-            <input
-              type="text"
-              value={freeWorkoutName}
-              onChange={(e) => setFreeWorkoutName(e.target.value)}
-              placeholder="Ex: Peito e Tríceps, Treino de Força..."
-              className="input-neon w-full"
-            />
-          </div>
-        )}
 
-        {/* Espaçamento vertical */}
-        <div style={{ height: '32px' }}></div>
+          <div style={{ height: '32px' }}></div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
-          <div>
-            <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
-              📅 Data do treino
-            </label>
-            <input
-              type="date"
-              value={workoutDate}
-              max={new Date().toISOString().split('T')[0]} // não permite data futura
-              onChange={(e) => setWorkoutDate(e.target.value)}
-              className="input-neon w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-4" style={{ color: 'var(--accent-primary)' }}>
-              📝 Notas do treino (opcional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Adicione notas sobre o treino..."
-              className="input-neon w-full"
-              rows={3}
-            />
-          </div>
-        </div>
-
-
-        {/* Espaçamento vertical */}
-        <div style={{ height: '24px' }}></div>
-
-        <div className="space-y-8 mb-10">
-          {currentWorkout.map((exercise, index) => (
-            <WorkoutCard
-              key={`exercise-${index}-${exercise.name}`}
-              exercise={exercise}
-              index={index}
-              updateSet={updateSet}
-              addSet={addSet}
-              removeSet={removeSet}
-              setSwapExerciseIndex={setSwapExerciseIndex}
-              setSwapModalOpen={setSwapModalOpen}
-              onRemoveExercise={() => removeExercise(index)} // <<< NOVO
-            />
-          ))}
-        </div>
-                <button // <<< NOVO
-          type="button"
-          onClick={handleAddExerciseClick}
-          className="btn-secondary mb-8"
-        >
-          + Adicionar exercício
-        </button>
-
-        {/* Espaçamento vertical */}
-        <div style={{ height: '32px' }}></div>
-
-        {/* Card de Resumo do Treino */}
-        {currentWorkout.length > 0 && (() => {
-          const timeEstimate = estimateWorkoutTime(currentWorkout);
-          const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
-          const totalExercises = currentWorkout.length;
-          
-          // Calcular séries válidas usando a função utilitária
-          const workoutFormatted = {
-            date: new Date(),
-            exercises: currentWorkout.map((ex) => ({
-              exercise: {
-                muscleGroup: ex.muscleGroup,
-                name: ex.name,
-                type: ex.type || 'isolation',
-              },
-              sets: ex.sets.map((set) => ({
-                rir: set.rir ?? null,
-                weight: set.weight,
-                reps: set.reps,
+          {/* Card de Resumo do Treino */}
+          {currentWorkout.length > 0 && (() => {
+            const timeEstimate = estimateWorkoutTime(currentWorkout);
+            const totalSets = currentWorkout.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+            const totalExercises = currentWorkout.length;
+            const workoutFormatted = {
+              date: new Date(),
+              exercises: currentWorkout.map((ex) => ({
+                exercise: {
+                  muscleGroup: ex.muscleGroup,
+                  name: ex.name,
+                  type: ex.type || 'isolation',
+                },
+                sets: ex.sets.map((set) => ({
+                  rir: set.rir ?? null,
+                  weight: set.weight,
+                  reps: set.reps,
+                })),
               })),
-            })),
-          };
-          const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
-          const totalValidSets = validSetsResult.totalValidSets;
+            };
+            const validSetsResult = calculateValidSetsForWorkout(workoutFormatted);
+            const totalValidSets = validSetsResult.totalValidSets;
 
-          return (
-            <div className="card-neon mb-8" style={{ 
-              padding: '32px',
-              background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
-              border: '2px solid var(--accent-primary)',
-            }}>
-              <h3 className="text-xl font-bold mb-6 text-glow" style={{ color: 'var(--accent-primary)' }}>
-                📊 Resumo do Treino
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
-                <div>
-                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Tempo Estimado
+            return (
+              <div className="card-neon mb-8" style={{
+                padding: '32px',
+                background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%)',
+                border: '2px solid var(--accent-primary)',
+              }}>
+                <h3 className="text-xl font-bold mb-6 text-glow" style={{ color: 'var(--accent-primary)' }}>
+                  📊 Resumo do Treino
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
+                  <div>
+                    <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Tempo Estimado</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                      {formatWorkoutTime(timeEstimate.totalMinutes)}
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
-                    {formatWorkoutTime(timeEstimate.totalMinutes)}
+                  <div>
+                    <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Séries Válidas</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--accent-success)' }}>
+                      {totalValidSets.toFixed(1)}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Séries Válidas
+                  <div>
+                    <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Séries Totais</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--accent-secondary)' }}>
+                      {totalSets}
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-success)' }}>
-                    {totalValidSets.toFixed(1)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Séries Totais
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-secondary)' }}>
-                    {totalSets}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-                    Exercícios
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
-                    {totalExercises}
+                  <div>
+                    <div className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Exercícios</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--accent-primary)' }}>
+                      {totalExercises}
+                    </div>
                   </div>
                 </div>
               </div>
+            );
+          })()}
+
+          <div style={{ height: '24px' }}></div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Salvando...' : '💾 Salvar Treino'}
+            </button>
+            <button
+              onClick={() => handleBackToTemplates()}
+              className="btn-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        {/* Modal de confirmação de saída */}
+        {showExitConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+            onClick={() => setShowExitConfirm(false)}
+          >
+            <div
+              className="card-neon w-full max-w-md"
+              onClick={(e) => e.stopPropagation()}
+              style={{ padding: '32px' }}
+            >
+              <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--accent-warning)' }}>
+                Descartar treino?
+              </h2>
+              <p className="mb-6" style={{ color: 'var(--text-primary)' }}>
+                Você tem dados preenchidos que serão perdidos. Tem certeza que quer sair sem salvar?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Continuar treinando
+                </button>
+                <button
+                  onClick={() => handleBackToTemplates(true)}
+                  className="btn-primary flex-1"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--accent-warning), #dc2626)',
+                  }}
+                >
+                  Descartar
+                </button>
+              </div>
             </div>
-          );
-        })()}
+          </div>
+        )}
 
-        {/* Espaçamento vertical */}
-        <div style={{ height: '24px' }}></div>
-
-        <div className="flex gap-4">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? 'Salvando...' : '💾 Salvar Treino'}
-          </button>
-          <button
-            onClick={handleBackToTemplates}
-            className="btn-secondary"
-          >
-            Cancelar
-          </button>
-        </div>
-        </div>
-
-        {/* Modal de Troca / Adição de Exercício */} {/* <<< NOVO comentário */}
+        {/* Modal de Troca / Adição de Exercício */}
         {(swapExerciseIndex !== null || addingExercise) && (
           <ExerciseSwapModal
             currentExercise={
               swapExerciseIndex !== null
                 ? currentWorkout[swapExerciseIndex]
-                : {
-                    name: "",
-                    muscleGroup: "",
-                    type: "isolation",
-                    sets: [],
-                  }
+                : { name: "", muscleGroup: "", type: "isolation", sets: [] }
             }
-            mode={addingExercise ? "add" : "swap"} // <<< NOVO
+            mode={addingExercise ? "add" : "swap"}
             isOpen={swapModalOpen}
             onClose={() => {
               setSwapModalOpen(false);
@@ -511,7 +513,7 @@ export default function WorkoutsClient() {
       </div>
     );
   }
-  // Se um programa foi selecionado, mostrar os templates desse programa
+
   if (selectedProgram) {
     const program = workoutPrograms[selectedProgram];
     return (
@@ -529,15 +531,11 @@ export default function WorkoutsClient() {
           <p className="text-base mb-14 text-center" style={{ color: 'var(--text-muted)' }}>
             {program.description}
           </p>
-
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-10 text-center" style={{ color: 'var(--accent-secondary)' }}>
               Selecione um treino:
             </h2>
-            
-            {/* Espaçamento vertical */}
             <div style={{ height: '24px' }}></div>
-            
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6 md:gap-y-8 lg:gap-y-10">
               {program.templates.map((template) => (
                 <button
@@ -561,14 +559,13 @@ export default function WorkoutsClient() {
     );
   }
 
-  // Tela inicial com os 3 programas principais
   return (
     <div className="flex justify-center min-h-screen py-12 px-8">
       <div className="w-full max-w-6xl">
         <div className="mb-16 text-center">
-          <h1 
+          <h1
             className="text-5xl font-bold mb-6 text-glow"
-            style={{ 
+            style={{
               color: 'var(--accent-primary)',
               fontFamily: 'var(--font-orbitron), sans-serif',
               letterSpacing: '2px',
@@ -580,6 +577,7 @@ export default function WorkoutsClient() {
             Escolha um programa de treino:
           </h2>
         </div>
+
         {/* Treino Livre */}
         <div className="mb-12">
           <button
@@ -592,61 +590,50 @@ export default function WorkoutsClient() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3
-                  className="text-2xl font-bold mb-2 text-glow"
-                  style={{ color: 'var(--accent-success)' }}
-                >
+                <h3 className="text-2xl font-bold mb-2 text-glow" style={{ color: 'var(--accent-success)' }}>
                   ⚡ Treino Livre
                 </h3>
                 <p className="text-base" style={{ color: 'var(--text-muted)' }}>
                   Monte seu treino do zero, sem template. Adicione os exercícios que quiser.
                 </p>
               </div>
-              <span
-                className="text-3xl ml-8"
-                style={{ color: 'var(--accent-success)' }}
-              >
-                →
-              </span>
+              <span className="text-3xl ml-8" style={{ color: 'var(--accent-success)' }}>→</span>
             </div>
           </button>
         </div>
 
-        {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
-        
-          <div className="grid md:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12">
-            {Object.entries(workoutPrograms).map(([key, program]) => (
-              <button
-                key={key}
-                onClick={() => handleProgramSelect(key as keyof typeof workoutPrograms)}
-                className="card-neon text-left p-8 transition-all hover:scale-105"
-                style={{
-                  minHeight: '220px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div>
-                  <h3 className="text-2xl font-bold mb-4 text-glow" style={{ color: 'var(--accent-primary)' }}>
-                    {program.name}
-                  </h3>
-                  <p className="text-base mb-6" style={{ color: 'var(--text-muted)' }}>
-                    {program.description}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-sm font-medium" style={{ color: 'var(--accent-secondary)' }}>
-                    {program.templates.length} treinos
-                  </span>
-                  <span className="text-2xl transition-transform group-hover:translate-x-2" style={{ color: 'var(--accent-primary)' }}>
-                    →
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+
+        <div className="grid md:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12">
+          {Object.entries(workoutPrograms).map(([key, program]) => (
+            <button
+              key={key}
+              onClick={() => handleProgramSelect(key as keyof typeof workoutPrograms)}
+              className="card-neon text-left p-8 transition-all hover:scale-105"
+              style={{
+                minHeight: '220px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <h3 className="text-2xl font-bold mb-4 text-glow" style={{ color: 'var(--accent-primary)' }}>
+                  {program.name}
+                </h3>
+                <p className="text-base mb-6" style={{ color: 'var(--text-muted)' }}>
+                  {program.description}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm font-medium" style={{ color: 'var(--accent-secondary)' }}>
+                  {program.templates.length} treinos
+                </span>
+                <span className="text-2xl" style={{ color: 'var(--accent-primary)' }}>→</span>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
