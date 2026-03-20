@@ -31,6 +31,7 @@ async function getStats(userId: string | null) {
         avgWeeklyWorkouts: 0,
         weightTrend: null,
         thisMonthAvgWeight: null,
+        streak: 0,
       };
     }
 
@@ -150,6 +151,36 @@ async function getStats(userId: string | null) {
       thisMonthAvgWeight != null && lastMonthAvgWeight != null
         ? thisMonthAvgWeight - lastMonthAvgWeight
         : null;
+          // Calcular streak de dias consecutivos treinando
+    const allWorkoutDates = await prisma.workout.findMany({
+      where: userWhere,
+      select: { date: true },
+      orderBy: { date: 'desc' },
+    });
+
+    // Conjunto de dias únicos com treino (formato YYYY-MM-DD)
+    const trainingDays = new Set(
+      allWorkoutDates.map((w) =>
+        new Date(w.date).toISOString().split('T')[0]
+      )
+    );
+
+    // Contar dias consecutivos até hoje
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i <= 365; i++) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      const key = day.toISOString().split('T')[0];
+      if (trainingDays.has(key)) {
+        streak++;
+      } else {
+        break; // Quebrou a sequência
+      }
+    }
+
 
     return {
       recentWorkouts,
@@ -164,7 +195,9 @@ async function getStats(userId: string | null) {
       avgWeeklyWorkouts,
       weightTrend,
       thisMonthAvgWeight,
+      streak, // <<< NOVO
     };
+
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
     return {
@@ -180,6 +213,7 @@ async function getStats(userId: string | null) {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
+      streak: 0,
     };
   }
 }
@@ -248,6 +282,7 @@ export default async function Home() {
       avgWeeklyWorkouts: 0,
       weightTrend: null,
       thisMonthAvgWeight: null,
+      streak: 0,
     };
   }
 
@@ -274,10 +309,24 @@ export default async function Home() {
             Dashboard
           </h1>
           <p 
-            className="text-xl font-light"
+            className="text-xl font-light mb-2"
             style={{ color: 'var(--text-muted)' }}
           >
             Seu Personal Trainer Digital
+          </p>
+          <p
+            className="text-lg font-medium"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {(() => {
+              const hour = new Date().getHours();
+              const greeting =
+                hour < 12 ? 'Bom dia' :
+                hour < 18 ? 'Boa tarde' :
+                'Boa noite';
+              const name = session.user.name?.split(' ')[0] ?? 'Atleta';
+              return `${greeting}, ${name}! 👋`;
+            })()}
           </p>
         </div>
 
@@ -413,6 +462,58 @@ export default async function Home() {
             </div>
           </div>
 
+          {/* Streak */}
+          <div
+            className="card-neon"
+            style={{
+              padding: '32px',
+              ...(stats.streak >= 3 && {
+                border: '2px solid #f59e0b',
+                background: 'rgba(245, 158, 11, 0.05)',
+              }),
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-3xl">
+                {stats.streak === 0 ? '😴' : stats.streak >= 30 ? '🏆' : stats.streak >= 14 ? '⚡' : stats.streak >= 7 ? '🔥' : '✨'}
+              </div>
+              {stats.streak >= 7 && (
+                <div
+                  className="text-xs font-semibold px-2 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    color: '#f59e0b',
+                  }}
+                >
+                  {stats.streak >= 30 ? 'Lendário!' : stats.streak >= 14 ? 'Incrível!' : 'Em chamas!'}
+                </div>
+              )}
+            </div>
+            <div
+              className="text-3xl font-bold mb-2 text-glow"
+              style={{
+                color: stats.streak === 0
+                  ? 'var(--text-muted)'
+                  : stats.streak >= 7
+                  ? '#f59e0b'
+                  : 'var(--accent-success)',
+              }}
+            >
+              {stats.streak} {stats.streak === 1 ? 'dia' : 'dias'}
+            </div>
+            <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+              Sequência
+            </div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {stats.streak === 0
+                ? 'Treine hoje para começar!'
+                : stats.streak === 1
+                ? 'Começou hoje, continue!'
+                : `${stats.streak} dias seguidos 💪`}
+            </div>
+          </div>
+
+
           {/* Tendência de Peso */}
           {stats.weightTrend !== null ? (
             <div className="card-neon" style={{ padding: '32px' }}>
@@ -453,6 +554,78 @@ export default async function Home() {
             </div>
           )}
         </div>
+                {/* Indicador de Progresso Semanal */}
+        {(() => {
+          const meta = 100// séries válidas semanais
+          const atual = stats.thisWeekValidSets;
+          const percentual = Math.min((atual / meta) * 100, 100);
+          const faltam = Math.max(meta - atual, 0);
+
+          const cor =
+            percentual >= 100 ? 'var(--accent-success)' :
+            percentual >= 60  ? 'var(--accent-primary)' :
+            percentual >= 30  ? 'var(--accent-secondary)' :
+            'var(--accent-warning)';
+
+          const mensagem =
+            percentual >= 100 ? '🏆 Meta semanal atingida! Excelente trabalho!' :
+            percentual >= 60  ? `💪 Quase lá! Faltam ${faltam.toFixed(1)} séries válidas.` :
+            percentual >= 30  ? `📈 Bom começo! Faltam ${faltam.toFixed(1)} séries válidas.` :
+            `🎯 Faltam ${faltam.toFixed(1)} séries válidas para atingir a meta.`;
+
+          return (
+            <div className="card-neon mb-12 md:mb-16 lg:mb-20" style={{ padding: '32px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className="text-lg font-bold"
+                  style={{ color: 'var(--accent-primary)' }}
+                >
+                  🎯 Progresso Semanal
+                </h3>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: cor }}
+                >
+                  {atual.toFixed(1)} / {meta} séries válidas
+                </span>
+              </div>
+
+              {/* Barra de progresso */}
+              <div
+                className="w-full rounded-full mb-4 overflow-hidden"
+                style={{
+                  height: '12px',
+                  background: 'rgba(0, 217, 255, 0.1)',
+                  border: '1px solid rgba(0, 217, 255, 0.2)',
+                }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${percentual}%`,
+                    background: percentual >= 100
+                      ? 'linear-gradient(90deg, var(--accent-success), #34d399)'
+                      : `linear-gradient(90deg, ${cor}, rgba(0, 217, 255, 0.6))`,
+                    boxShadow: `0 0 10px ${cor}`,
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {mensagem}
+                </p>
+                <span
+                  className="text-sm font-bold ml-4 flex-shrink-0"
+                  style={{ color: cor }}
+                >
+                  {percentual.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
 
         {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
