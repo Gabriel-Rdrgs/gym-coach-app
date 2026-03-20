@@ -37,8 +37,8 @@ export default function WorkoutsClient() {
   const [workoutDate, setWorkoutDate] = useState( // <<< NOVO
     new Date().toISOString().split('T')[0] // data de hoje no formato YYYY-MM-DD
   );
-
-
+  const [isFreeworkout, setIsFreeWorkout] = useState(false); // <<< NOVO
+  const [freeWorkoutName, setFreeWorkoutName] = useState(''); // <<< NOVO
   const handleProgramSelect = (program: keyof typeof workoutPrograms) => {
     setSelectedProgram(program);
   };
@@ -69,8 +69,11 @@ export default function WorkoutsClient() {
     setSelectedTemplate('');
     setCurrentWorkout([]);
     setNotes('');
-    setWorkoutDate(new Date().toISOString().split('T')[0]); // <<< NOVO
+    setWorkoutDate(new Date().toISOString().split('T')[0]);
+    setIsFreeWorkout(false);
+    setFreeWorkoutName('');
   };
+
 
 
   const updateSet = useCallback((exerciseIndex: number, setIndex: number, field: keyof SetData, value: number | undefined) => {
@@ -125,14 +128,21 @@ export default function WorkoutsClient() {
       return updatedWorkout;
     });
   }, []);
-  const removeExercise = useCallback((exerciseIndex: number) => { // <<< NOVO
+  const removeExercise = useCallback((exerciseIndex: number) => { 
     setCurrentWorkout((prev) => prev.filter((_, idx) => idx !== exerciseIndex));
-  }, []); // <<< NOVO
-  const handleAddExerciseClick = () => { // <<< NOVO
+  }, []);
+  const handleAddExerciseClick = () => {
     setAddingExercise(true);
     setSwapExerciseIndex(null);
     setSwapModalOpen(true);
-  }; // <<< NOVO
+  };
+  const handleFreeWorkout = () => {
+    setIsFreeWorkout(true);
+    setSelectedTemplate('Treino Livre');
+    setCurrentWorkout([]);
+    setShowForm(true);
+  };
+
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -143,7 +153,9 @@ export default function WorkoutsClient() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          template: selectedTemplate,
+          template: isFreeworkout && freeWorkoutName.trim()
+            ? freeWorkoutName.trim()
+            : selectedTemplate,
           notes: notes || null,
           date: workoutDate, // <<< NOVO
           exercises: currentWorkout.map((ex, idx) => ({
@@ -302,6 +314,24 @@ export default function WorkoutsClient() {
             ← Voltar
           </button>
         </div>
+        {/* Nome customizado — só aparece no treino livre */}
+        {isFreeworkout && (
+          <div className="mb-6">
+            <label
+              className="block text-sm font-medium mb-4"
+              style={{ color: 'var(--accent-primary)' }}
+            >
+              Nome do treino
+            </label>
+            <input
+              type="text"
+              value={freeWorkoutName}
+              onChange={(e) => setFreeWorkoutName(e.target.value)}
+              placeholder="Ex: Peito e Tríceps, Treino de Força..."
+              className="input-neon w-full"
+            />
+          </div>
+        )}
 
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
@@ -550,7 +580,38 @@ export default function WorkoutsClient() {
             Escolha um programa de treino:
           </h2>
         </div>
-        
+        {/* Treino Livre */}
+        <div className="mb-12">
+          <button
+            onClick={handleFreeWorkout}
+            className="w-full card-neon text-left p-8 transition-all hover:scale-[1.02]"
+            style={{
+              border: '2px solid var(--accent-success)',
+              background: 'rgba(16, 185, 129, 0.05)',
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3
+                  className="text-2xl font-bold mb-2 text-glow"
+                  style={{ color: 'var(--accent-success)' }}
+                >
+                  ⚡ Treino Livre
+                </h3>
+                <p className="text-base" style={{ color: 'var(--text-muted)' }}>
+                  Monte seu treino do zero, sem template. Adicione os exercícios que quiser.
+                </p>
+              </div>
+              <span
+                className="text-3xl ml-8"
+                style={{ color: 'var(--accent-success)' }}
+              >
+                →
+              </span>
+            </div>
+          </button>
+        </div>
+
         {/* Espaçamento vertical */}
         <div style={{ height: '32px' }}></div>
         
