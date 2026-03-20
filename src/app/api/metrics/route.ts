@@ -84,4 +84,87 @@ export async function GET() {
     );
   }
 }
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
 
+    const userId = session.user.id;
+    const body = await request.json();
+    const { id, ...fields } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 });
+    }
+
+    const existing = await prisma.metric.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Métrica não encontrada' }, { status: 404 });
+    }
+
+    const metric = await prisma.metric.update({
+      where: { id },
+      data: {
+        date: fields.date ? new Date(fields.date) : existing.date,
+        weight: fields.weight ? parseFloat(fields.weight) : null,
+        waist: fields.waist ? parseFloat(fields.waist) : null,
+        armCircumference: fields.armCircumference ? parseFloat(fields.armCircumference) : null,
+        thighCircumference: fields.thighCircumference ? parseFloat(fields.thighCircumference) : null,
+        chestCircumference: fields.chestCircumference ? parseFloat(fields.chestCircumference) : null,
+        bodyFatPercentage: fields.bodyFatPercentage ? parseFloat(fields.bodyFatPercentage) : null,
+        sleep: fields.sleep ? parseFloat(fields.sleep) : null,
+        energy: fields.energy ? parseInt(fields.energy) : null,
+        stress: fields.stress ? parseInt(fields.stress) : null,
+        notes: fields.notes || null,
+      },
+    });
+
+    return NextResponse.json({ metric });
+  } catch (error: any) {
+    console.error('Erro ao atualizar métrica:', error);
+    return NextResponse.json(
+      { error: error.message || 'Erro ao atualizar métrica' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { searchParams } = new URL(request.url);
+    const id = parseInt(searchParams.get('id') || '');
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const existing = await prisma.metric.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Métrica não encontrada' }, { status: 404 });
+    }
+
+    await prisma.metric.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Erro ao deletar métrica:', error);
+    return NextResponse.json(
+      { error: error.message || 'Erro ao deletar métrica' },
+      { status: 500 }
+    );
+  }
+}
