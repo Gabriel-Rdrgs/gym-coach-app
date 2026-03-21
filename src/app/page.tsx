@@ -32,7 +32,8 @@ async function getStats(userId: string | null) {
         weightTrend: null,
         thisMonthAvgWeight: null,
         streak: 0,
-        weeklySetGoal: 100, // ← fallback padrão
+        weeklySetGoal: 100,
+        trainingDaysPerWeek: null,
       };
     }
 
@@ -220,7 +221,8 @@ async function getStats(userId: string | null) {
       weightTrend,
       thisMonthAvgWeight,
       streak,
-      weeklySetGoal, // ← NOVO
+      weeklySetGoal,
+      trainingDaysPerWeek: userProfile?.trainingDaysPerWeek ?? null,
     };
 
   } catch (error) {
@@ -239,7 +241,8 @@ async function getStats(userId: string | null) {
       weightTrend: null,
       thisMonthAvgWeight: null,
       streak: 0,
-      weeklySetGoal: 100, // ← fallback no catch
+      weeklySetGoal: 100,
+      trainingDaysPerWeek: null,
     };
   }
 }
@@ -438,8 +441,43 @@ export default async function Home() {
             <div className="text-sm font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
               Treinos Esta Semana
             </div>
+
+            {/* Barra de progresso + "X de Y dias planejados" */}
+            {stats.trainingDaysPerWeek && (
+              <div className="mt-2">
+                <div
+                  className="w-full rounded-full overflow-hidden mb-1.5"
+                  style={{
+                    height: '4px',
+                    background: 'rgba(0, 217, 255, 0.1)',
+                  }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min((stats.thisWeekWorkouts / stats.trainingDaysPerWeek) * 100, 100)}%`,
+                      background: stats.thisWeekWorkouts >= stats.trainingDaysPerWeek
+                        ? 'var(--accent-success)'
+                        : 'var(--accent-primary)',
+                      boxShadow: '0 0 6px var(--accent-primary)',
+                    }}
+                  />
+                </div>
+                <div className="text-xs" style={{
+                  color: stats.thisWeekWorkouts >= stats.trainingDaysPerWeek
+                    ? 'var(--accent-success)'
+                    : 'var(--text-muted)',
+                }}>
+                  {stats.thisWeekWorkouts >= stats.trainingDaysPerWeek
+                    ? `✅ ${stats.thisWeekWorkouts} de ${stats.trainingDaysPerWeek} dias — meta atingida!`
+                    : `${stats.thisWeekWorkouts} de ${stats.trainingDaysPerWeek} dias planejados`
+                  }
+                </div>
+              </div>
+            )}
+
             {stats.lastWeekWorkouts > 0 && (
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 Semana passada: {stats.lastWeekWorkouts}
               </div>
             )}
