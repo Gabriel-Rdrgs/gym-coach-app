@@ -32,6 +32,7 @@ async function getStats(userId: string | null) {
         weightTrend: null,
         thisMonthAvgWeight: null,
         streak: 0,
+        weeklySetGoal: 100, // ← fallback padrão
       };
     }
 
@@ -50,6 +51,16 @@ async function getStats(userId: string | null) {
     fourWeeksAgo.setDate(startOfWeek.getDate() - 28);
 
     const userWhere = { userId };
+
+    // ── NOVO: busca o perfil do usuário para pegar a meta personalizada ──────
+    const userProfile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: {
+        suggestedWeeklySets: true,
+        goal: true,
+        trainingDaysPerWeek: true,
+      },
+    });
 
     // Queries em sequência, todas filtradas por usuário
     const recentWorkouts = await prisma.workout.findMany({
@@ -104,6 +115,7 @@ async function getStats(userId: string | null) {
         };
         return sum + calculateValidSetsForWorkout(formatted).totalValidSets;
       }, 0);
+
     const thisWeekValidSets = calculateWeekValidSets(thisWeekWorkouts);
     const lastWeekValidSets = calculateWeekValidSets(lastWeekWorkouts);
 
@@ -151,21 +163,20 @@ async function getStats(userId: string | null) {
       thisMonthAvgWeight != null && lastMonthAvgWeight != null
         ? thisMonthAvgWeight - lastMonthAvgWeight
         : null;
-          // Calcular streak de dias consecutivos treinando
+
+    // Calcular streak de dias consecutivos treinando
     const allWorkoutDates = await prisma.workout.findMany({
       where: userWhere,
       select: { date: true },
       orderBy: { date: 'desc' },
     });
 
-    // Conjunto de dias únicos com treino (formato YYYY-MM-DD)
     const trainingDays = new Set(
       allWorkoutDates.map((w) =>
         new Date(w.date).toISOString().split('T')[0]
       )
     );
 
-    // Contar dias consecutivos até hoje
     let streak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -177,10 +188,23 @@ async function getStats(userId: string | null) {
       if (trainingDays.has(key)) {
         streak++;
       } else {
-        break; // Quebrou a sequência
+        break;
       }
     }
 
+    // ── NOVO: calcula a meta semanal personalizada ────────────────────────────
+    // Soma todas as séries sugeridas por grupo muscular em um total semanal.
+    // Fallback: 100 séries (padrão anterior) para usuários sem onboarding.
+    let weeklySetGoal = 100;
+    if (
+      userProfile?.suggestedWeeklySets &&
+      typeof userProfile.suggestedWeeklySets === 'object' &&
+      !Array.isArray(userProfile.suggestedWeeklySets)
+    ) {
+      const sets = userProfile.suggestedWeeklySets as Record<string, number>;
+      const total = Object.values(sets).reduce((sum, v) => sum + (v ?? 0), 0);
+      if (total > 0) weeklySetGoal = total;
+    }
 
     return {
       recentWorkouts,
@@ -195,7 +219,8 @@ async function getStats(userId: string | null) {
       avgWeeklyWorkouts,
       weightTrend,
       thisMonthAvgWeight,
-      streak, // <<< NOVO
+      streak,
+      weeklySetGoal, // ← NOVO
     };
 
   } catch (error) {
@@ -214,6 +239,7 @@ async function getStats(userId: string | null) {
       weightTrend: null,
       thisMonthAvgWeight: null,
       streak: 0,
+      weeklySetGoal: 100, // ← fallback no catch
     };
   }
 }
@@ -257,7 +283,6 @@ export default async function Home() {
     session = null;
   }
 
-  // SE NÃO HOUVER SESSÃO, REDIRECIONA PARA /login
   if (!session) {
     redirect("/login");
   }
@@ -283,6 +308,7 @@ export default async function Home() {
       weightTrend: null,
       thisMonthAvgWeight: null,
       streak: 0,
+      weeklySetGoal: 100, // ← fallback no catch do Home
     };
   }
 
@@ -298,9 +324,9 @@ export default async function Home() {
       <div className="max-w-7xl mx-auto py-12">
         {/* Page Title */}
         <div className="text-center mb-16">
-          <h1 
+          <h1
             className="text-5xl font-bold mb-4 text-glow"
-            style={{ 
+            style={{
               color: 'var(--accent-primary)',
               fontFamily: 'var(--font-orbitron), sans-serif',
               letterSpacing: '2px',
@@ -308,7 +334,7 @@ export default async function Home() {
           >
             Dashboard
           </h1>
-          <p 
+          <p
             className="text-xl font-light mb-2"
             style={{ color: 'var(--text-muted)' }}
           >
@@ -398,8 +424,8 @@ export default async function Home() {
                 <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
                   stats.thisWeekWorkouts >= stats.lastWeekWorkouts ? 'text-green-400' : 'text-red-400'
                 }`} style={{
-                  background: stats.thisWeekWorkouts >= stats.lastWeekWorkouts 
-                    ? 'rgba(16, 185, 129, 0.2)' 
+                  background: stats.thisWeekWorkouts >= stats.lastWeekWorkouts
+                    ? 'rgba(16, 185, 129, 0.2)'
                     : 'rgba(239, 68, 68, 0.2)',
                 }}>
                   {stats.thisWeekWorkouts >= stats.lastWeekWorkouts ? '↑' : '↓'} {Math.abs(stats.thisWeekWorkouts - stats.lastWeekWorkouts)}
@@ -427,8 +453,8 @@ export default async function Home() {
                 <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
                   stats.thisWeekValidSets >= stats.lastWeekValidSets ? 'text-green-400' : 'text-red-400'
                 }`} style={{
-                  background: stats.thisWeekValidSets >= stats.lastWeekValidSets 
-                    ? 'rgba(16, 185, 129, 0.2)' 
+                  background: stats.thisWeekValidSets >= stats.lastWeekValidSets
+                    ? 'rgba(16, 185, 129, 0.2)'
                     : 'rgba(239, 68, 68, 0.2)',
                 }}>
                   {stats.thisWeekValidSets >= stats.lastWeekValidSets ? '↑' : '↓'} {Math.abs(stats.thisWeekValidSets - stats.lastWeekValidSets).toFixed(1)}
@@ -513,7 +539,6 @@ export default async function Home() {
             </div>
           </div>
 
-
           {/* Tendência de Peso */}
           {stats.weightTrend !== null ? (
             <div className="card-neon" style={{ padding: '32px' }}>
@@ -522,8 +547,8 @@ export default async function Home() {
                 <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
                   stats.weightTrend >= 0 ? 'text-green-400' : 'text-red-400'
                 }`} style={{
-                  background: stats.weightTrend >= 0 
-                    ? 'rgba(16, 185, 129, 0.2)' 
+                  background: stats.weightTrend >= 0
+                    ? 'rgba(16, 185, 129, 0.2)'
                     : 'rgba(239, 68, 68, 0.2)',
                 }}>
                   {stats.weightTrend >= 0 ? '↑' : '↓'} {Math.abs(stats.weightTrend).toFixed(1)} kg
@@ -554,9 +579,11 @@ export default async function Home() {
             </div>
           )}
         </div>
-                {/* Indicador de Progresso Semanal */}
+
+        {/* Indicador de Progresso Semanal */}
         {(() => {
-          const meta = 100// séries válidas semanais
+          // ── ALTERADO: usa a meta personalizada do onboarding ──────────────
+          const meta = stats.weeklySetGoal;
           const atual = stats.thisWeekValidSets;
           const percentual = Math.min((atual / meta) * 100, 100);
           const faltam = Math.max(meta - atual, 0);
@@ -582,12 +609,21 @@ export default async function Home() {
                 >
                   🎯 Progresso Semanal
                 </h3>
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: cor }}
-                >
-                  {atual.toFixed(1)} / {meta} séries válidas
-                </span>
+                {/* ── ALTERADO: exibe meta + origem ──────────────────────── */}
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: cor }}
+                  >
+                    {atual.toFixed(1)} / {meta} séries válidas
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    Meta personalizada pelo GymCoach
+                  </span>
+                </div>
               </div>
 
               {/* Barra de progresso */}
@@ -626,16 +662,15 @@ export default async function Home() {
           );
         })()}
 
-
         {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
 
-          {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12 mb-20">
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12 mb-20">
           {/* Quick Actions - Takes 2 columns */}
           <div className="lg:col-span-2">
             <div className="card-neon" style={{ padding: '48px' }}>
-              <h2 
+              <h2
                 className="text-3xl font-bold mb-12"
                 style={{ color: 'var(--accent-primary)' }}
               >
@@ -699,7 +734,7 @@ export default async function Home() {
           {/* Latest Metric - Takes 1 column */}
           {stats.latestMetric && (
             <div className="card-neon" style={{ padding: '48px' }}>
-              <h2 
+              <h2
                 className="text-3xl font-bold mb-12"
                 style={{ color: 'var(--accent-secondary)' }}
               >
@@ -788,14 +823,14 @@ export default async function Home() {
         {/* Recent Workouts Section */}
         <div className="card-neon" style={{ padding: '48px' }}>
           <div className="flex items-center justify-between mb-14">
-            <h2 
+            <h2
               className="text-3xl font-bold"
               style={{ color: 'var(--accent-primary)' }}
             >
               Treinos Recentes
             </h2>
             <Link href="/workouts/list">
-              <span 
+              <span
                 className="text-base font-semibold hover:underline transition-all inline-flex items-center gap-2"
                 style={{ color: 'var(--accent-secondary)' }}
               >
