@@ -6,8 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
-
 model Exercise {
   id                    Int                    @id @default(autoincrement())
   name                  String                 @unique
@@ -197,6 +195,33 @@ model ExerciseSubstitution {
   @@index([substitutedExerciseId])
 }
 
+model UserProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  onboardingCompleted   Boolean  @default(false)
+  onboardingCompletedAt DateTime?
+
+  goal                  String?  // "hypertrophy" | "fat_loss" | "strength" | "endurance" | "health"
+  experienceLevel       String?  // "beginner" | "intermediate" | "advanced"
+  trainingDaysPerWeek   Int?     // 2–6
+  sessionDuration       String?  // "30min" | "45min" | "1h" | "1h30" | "2h+"
+  preferredSplit        String?  // "full_body" | "abc" | "ppl" | "abcd" | "abcde" | "upper_lower" | "strength"
+  limitations           Json?    // string[]
+
+  weightKg              Float?
+  heightCm              Float?
+
+  suggestedProgram      String?  // ex: "PPL Hipertrofia"
+  suggestedWeeklySets   Json?    // ex: { chest: 12, back: 14, ... }
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
 model User {
   id              String           @id @default(cuid())
   name            String?
@@ -210,6 +235,7 @@ model User {
   personalRecords PersonalRecord[]
   workouts        Workout[]
   workoutPrograms WorkoutProgram[]
+  profile         UserProfile?     // relação 1-1 com perfil
 
   @@map("users")
 }

@@ -3,7 +3,8 @@ import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import SidebarWrapper from "@/components/SidebarWrapper";
 import ToastContainer from "@/components/Toast";
-import SessionProviderWrapper from "@/components/SessionProviderWrapper"; // ← novo import
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -22,12 +23,12 @@ export const metadata: Metadata = {
   description: "Acompanhe seus treinos, exercícios e progresso",
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
@@ -48,13 +49,14 @@ export default function RootLayout({
         <SessionProviderWrapper>
           <SidebarWrapper />
           <ToastContainer />
-          <main 
+          <main
             className="min-h-screen transition-all duration-300 sidebar-open"
             style={{
-              paddingTop: '80px',
+              paddingTop: "80px",
             }}
           >
-            {children}
+            {/* O OnboardingGate envolve todo o conteúdo protegido */}
+            <OnboardingGate>{children}</OnboardingGate>
           </main>
         </SessionProviderWrapper>
       </body>
