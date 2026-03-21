@@ -105,9 +105,9 @@ export default function OnboardingWizard() {
 
   // Chamado na tela de resultado ao clicar "Entrar no app"
   const handleFinish = () => {
-    router.refresh(); // força o OnboardingGate a re-verificar o banco
-    router.push("/onboarding/setup");
+    window.location.href = "/onboarding/setup";
   };
+
 
 
 
