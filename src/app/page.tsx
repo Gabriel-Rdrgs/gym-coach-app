@@ -1,3 +1,5 @@
+// src/app/page.tsx
+
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
@@ -5,6 +7,7 @@ import { redirect } from "next/navigation";
 import { calculateValidSetsForWorkout } from '@/lib/progress-utils';
 import { getTodayWorkoutData } from '@/lib/queries/today-workout';
 import TodayWorkout from '@/components/TodayWorkout';
+import OnboardingBanner from '@/components/OnboardingBanner';
 
 // Forçar renderização dinâmica (não pré-renderizar durante build)
 export const dynamic = 'force-dynamic';
@@ -34,6 +37,11 @@ async function getStats(userId: string | null) {
         streak: 0,
         weeklySetGoal: 100,
         trainingDaysPerWeek: null,
+        showOnboardingBanner: false,
+        bannerGoal: null,
+        bannerExperienceLevel: null,
+        bannerSuggestedProgram: null,
+        bannerPreferredSplit: null,
       };
     }
 
@@ -53,17 +61,20 @@ async function getStats(userId: string | null) {
 
     const userWhere = { userId };
 
-    // ── NOVO: busca o perfil do usuário para pegar a meta personalizada ──────
     const userProfile = await prisma.userProfile.findUnique({
       where: { userId },
       select: {
         suggestedWeeklySets: true,
         goal: true,
         trainingDaysPerWeek: true,
+        experienceLevel: true,
+        suggestedProgram: true,
+        preferredSplit: true,
+        onboardingBannerDismissed: true,
+        onboardingCompleted: true,
       },
     });
 
-    // Queries em sequência, todas filtradas por usuário
     const recentWorkouts = await prisma.workout.findMany({
       where: userWhere,
       take: 5,
@@ -85,7 +96,6 @@ async function getStats(userId: string | null) {
     const totalWorkouts = await prisma.workout.count({ where: userWhere });
     const totalMetrics = await prisma.metric.count({ where: userWhere });
 
-    // Só treinos das últimas 2 semanas (não todos) para séries válidas
     const workoutsLastTwoWeeks = await prisma.workout.findMany({
       where: { ...userWhere, date: { gte: startOfLastWeek } },
       orderBy: { date: 'asc' },
@@ -120,7 +130,6 @@ async function getStats(userId: string | null) {
     const thisWeekValidSets = calculateWeekValidSets(thisWeekWorkouts);
     const lastWeekValidSets = calculateWeekValidSets(lastWeekWorkouts);
 
-    // Média semanal: só treinos das últimas 4 semanas (só campo date)
     const workoutsFourWeeks = await prisma.workout.findMany({
       where: { ...userWhere, date: { gte: fourWeeksAgo } },
       select: { date: true },
@@ -139,7 +148,6 @@ async function getStats(userId: string | null) {
         ? Object.values(weeklyCounts).reduce((a, b) => a + b, 0) / Object.keys(weeklyCounts).length
         : 0;
 
-    // Tendência de peso: só métricas desde o mês passado
     const metricsForTrend = await prisma.metric.findMany({
       where: { ...userWhere, date: { gte: startOfLastMonth } },
       select: { date: true, weight: true },
@@ -165,7 +173,6 @@ async function getStats(userId: string | null) {
         ? thisMonthAvgWeight - lastMonthAvgWeight
         : null;
 
-    // Calcular streak de dias consecutivos treinando
     const allWorkoutDates = await prisma.workout.findMany({
       where: userWhere,
       select: { date: true },
@@ -193,9 +200,6 @@ async function getStats(userId: string | null) {
       }
     }
 
-    // ── NOVO: calcula a meta semanal personalizada ────────────────────────────
-    // Soma todas as séries sugeridas por grupo muscular em um total semanal.
-    // Fallback: 100 séries (padrão anterior) para usuários sem onboarding.
     let weeklySetGoal = 100;
     if (
       userProfile?.suggestedWeeklySets &&
@@ -223,6 +227,13 @@ async function getStats(userId: string | null) {
       streak,
       weeklySetGoal,
       trainingDaysPerWeek: userProfile?.trainingDaysPerWeek ?? null,
+      showOnboardingBanner:
+        (userProfile?.onboardingCompleted ?? false) &&
+        !(userProfile?.onboardingBannerDismissed ?? false),
+      bannerGoal: userProfile?.goal ?? null,
+      bannerExperienceLevel: userProfile?.experienceLevel ?? null,
+      bannerSuggestedProgram: userProfile?.suggestedProgram ?? null,
+      bannerPreferredSplit: userProfile?.preferredSplit ?? null,
     };
 
   } catch (error) {
@@ -243,6 +254,11 @@ async function getStats(userId: string | null) {
       streak: 0,
       weeklySetGoal: 100,
       trainingDaysPerWeek: null,
+      showOnboardingBanner: false,
+      bannerGoal: null,
+      bannerExperienceLevel: null,
+      bannerSuggestedProgram: null,
+      bannerPreferredSplit: null,
     };
   }
 }
@@ -292,6 +308,19 @@ export default async function Home() {
 
   const userId = session.user.id;
 
+  // Busca o programa ativo para o link do banner
+  let activeProgramId: number | null = null;
+  try {
+    const activeProgram = await prisma.workoutProgram.findFirst({
+      where: { userId, isActive: true },
+      select: { id: true },
+      orderBy: { startDate: 'desc' },
+    });
+    activeProgramId = activeProgram?.id ?? null;
+  } catch {
+    activeProgramId = null;
+  }
+
   let stats;
   try {
     stats = await getStats(userId);
@@ -311,7 +340,13 @@ export default async function Home() {
       weightTrend: null,
       thisMonthAvgWeight: null,
       streak: 0,
-      weeklySetGoal: 100, // ← fallback no catch do Home
+      weeklySetGoal: 100,
+      trainingDaysPerWeek: null,
+      showOnboardingBanner: false,
+      bannerGoal: null,
+      bannerExperienceLevel: null,
+      bannerSuggestedProgram: null,
+      bannerPreferredSplit: null,
     };
   }
 
@@ -358,6 +393,19 @@ export default async function Home() {
             })()}
           </p>
         </div>
+
+        {/* Banner pós-onboarding */}
+        {stats.showOnboardingBanner && (
+          <OnboardingBanner
+            goal={stats.bannerGoal}
+            experienceLevel={stats.bannerExperienceLevel}
+            suggestedProgram={stats.bannerSuggestedProgram}
+            preferredSplit={stats.bannerPreferredSplit}
+            trainingDaysPerWeek={stats.trainingDaysPerWeek}
+            weeklySetGoal={stats.weeklySetGoal}
+            activeProgramId={activeProgramId}
+          />
+        )}
 
         {/* Treino do Dia */}
         <TodayWorkout initialData={todayWorkoutData} />
@@ -442,15 +490,11 @@ export default async function Home() {
               Treinos Esta Semana
             </div>
 
-            {/* Barra de progresso + "X de Y dias planejados" */}
             {stats.trainingDaysPerWeek && (
               <div className="mt-2">
                 <div
                   className="w-full rounded-full overflow-hidden mb-1.5"
-                  style={{
-                    height: '4px',
-                    background: 'rgba(0, 217, 255, 0.1)',
-                  }}
+                  style={{ height: '4px', background: 'rgba(0, 217, 255, 0.1)' }}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-500"
@@ -620,7 +664,6 @@ export default async function Home() {
 
         {/* Indicador de Progresso Semanal */}
         {(() => {
-          // ── ALTERADO: usa a meta personalizada do onboarding ──────────────
           const meta = stats.weeklySetGoal;
           const atual = stats.thisWeekValidSets;
           const percentual = Math.min((atual / meta) * 100, 100);
@@ -647,7 +690,6 @@ export default async function Home() {
                 >
                   🎯 Progresso Semanal
                 </h3>
-                {/* ── ALTERADO: exibe meta + origem ──────────────────────── */}
                 <div className="flex flex-col items-end gap-1">
                   <span
                     className="text-sm font-semibold"
@@ -664,7 +706,6 @@ export default async function Home() {
                 </div>
               </div>
 
-              {/* Barra de progresso */}
               <div
                 className="w-full rounded-full mb-4 overflow-hidden"
                 style={{
@@ -700,12 +741,11 @@ export default async function Home() {
           );
         })()}
 
-        {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-x-8 gap-y-8 md:gap-y-10 lg:gap-y-12 mb-20">
-          {/* Quick Actions - Takes 2 columns */}
+          {/* Quick Actions */}
           <div className="lg:col-span-2">
             <div className="card-neon" style={{ padding: '48px' }}>
               <h2
@@ -769,7 +809,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Latest Metric - Takes 1 column */}
+          {/* Latest Metric */}
           {stats.latestMetric && (
             <div className="card-neon" style={{ padding: '48px' }}>
               <h2
@@ -855,7 +895,6 @@ export default async function Home() {
           )}
         </div>
 
-        {/* Espaçamento vertical entre seções */}
         <div style={{ height: '64px' }}></div>
 
         {/* Recent Workouts Section */}

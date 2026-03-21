@@ -63,7 +63,9 @@ export async function PATCH(req: Request) {
     limitations,
     weightKg,
     heightCm,
+    onboardingBannerDismissed,
   } = body;
+
 
   // Validações básicas
   if (trainingDaysPerWeek !== undefined) {
@@ -106,6 +108,7 @@ export async function PATCH(req: Request) {
       ...(limitations !== undefined && { limitations }),
       ...(weightKg !== undefined && { weightKg }),
       ...(heightCm !== undefined && { heightCm }),
+      ...(onboardingBannerDismissed !== undefined && { onboardingBannerDismissed }),
     },
     select: {
       goal: true,

@@ -214,13 +214,13 @@ model UserProfile {
   heightCm              Float?
 
   suggestedProgram      String?  // ex: "PPL Hipertrofia"
-  suggestedWeeklySets   Json?    // ex: { chest: 12, back: 14, ... }
-
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
+  suggestedWeeklySets      Json?
+  onboardingBannerDismissed Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
   @@map("user_profiles")
 }
+
 
 model User {
   id              String           @id @default(cuid())
