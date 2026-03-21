@@ -133,25 +133,53 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             background: 'var(--bg-card)',
           }}
         >
-          {/* Link de Perfil */}
-          <Link
-            href="/profile"
-            onClick={() => setIsMobileOpen(false)}
-            className="flex items-center gap-4 px-5 py-4 transition-all hover:bg-purple-500/10"
-            style={{
-              color: isActive('/profile')
-                ? 'var(--accent-secondary)'
-                : 'var(--text-muted)',
-              borderBottom: '1px solid rgba(0, 217, 255, 0.1)',
-            }}
-          >
-            <span className="text-2xl flex-shrink-0">👤</span>
-            {isOpen && (
-              <span className="font-semibold text-sm whitespace-nowrap">
-                Perfil
-              </span>
-            )}
-          </Link>
+          {/* Links de Perfil e Configurações lado a lado */}
+          <div className="flex border-b" style={{ borderColor: 'rgba(0, 217, 255, 0.1)' }}>
+
+            {/* Perfil */}
+            <Link
+              href="/profile"
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center gap-3 px-5 py-4 transition-all hover:bg-purple-500/10 flex-1"
+              style={{
+                color: isActive('/profile') && !isActive('/profile/settings')
+                  ? 'var(--accent-secondary)'
+                  : 'var(--text-muted)',
+              }}
+              title="Perfil"
+            >
+              <span className="text-2xl flex-shrink-0">👤</span>
+              {isOpen && (
+                <span className="font-semibold text-sm whitespace-nowrap">
+                  Perfil
+                </span>
+              )}
+            </Link>
+
+            {/* Divisor vertical */}
+            <div style={{ width: '1px', background: 'rgba(0, 217, 255, 0.15)' }} />
+
+            {/* Configurações */}
+            <Link
+              href="/profile/settings"
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center gap-3 px-5 py-4 transition-all hover:bg-cyan-500/10 flex-1"
+              style={{
+                color: isActive('/profile/settings')
+                  ? 'var(--accent-primary)'
+                  : 'var(--text-muted)',
+              }}
+              title="Configurações de treino"
+            >
+              <span className="text-2xl flex-shrink-0">⚙️</span>
+              {isOpen && (
+                <span className="font-semibold text-sm whitespace-nowrap">
+                  Config.
+                </span>
+              )}
+            </Link>
+
+          </div>
 
           {/* Botão de Toggle */}
           <button
