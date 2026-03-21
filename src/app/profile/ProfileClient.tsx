@@ -18,18 +18,76 @@ interface Stats {
   totalPRs: number;
 }
 
-export default function ProfileClient() {
+interface UserProfile {
+  goal: string | null;
+  experienceLevel: string | null;
+  trainingDaysPerWeek: number | null;
+  preferredSplit: string | null;
+  limitations: string[];
+  weightKg: number | null;
+  heightCm: number | null;
+  suggestedProgram: string | null;
+  weeklySetGoal: number | null;
+  onboardingCompleted: boolean;
+}
+
+interface ProfileClientProps {
+  userProfile: UserProfile | null;
+  activeProgramName: string | null;
+}
+
+const GOAL_LABELS: Record<string, string> = {
+  lose_weight: "Perder peso",
+  gain_muscle: "Ganhar músculo",
+  maintain: "Manter forma",
+  improve_performance: "Melhorar performance",
+  improve_health: "Melhorar saúde",
+  hypertrophy: "Hipertrofia",
+  strength: "Força",
+  endurance: "Resistência",
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  beginner: "Iniciante",
+  intermediate: "Intermediário",
+  advanced: "Avançado",
+};
+
+const SPLIT_LABELS: Record<string, string> = {
+  full_body: "Full Body",
+  upper_lower: "Upper/Lower",
+  push_pull_legs: "Push/Pull/Legs",
+  bro_split: "Bro Split",
+  custom: "Personalizado",
+  auto: "Automático",
+  ppl: "Push/Pull/Legs",
+  upper_lower_full: "Upper/Lower/Full",
+};
+
+const LIMITATION_LABELS: Record<string, string> = {
+  knee: "Joelho",
+  shoulder: "Ombro",
+  back: "Coluna",
+  wrist: "Pulso",
+  hip: "Quadril",
+  ankle: "Tornozelo",
+  neck: "Pescoço",
+  elbow: "Cotovelo",
+};
+
+export default function ProfileClient({
+  userProfile,
+  activeProgramName,
+}: ProfileClientProps) {
   const toast = useToast();
   const [user, setUser] = useState<UserData | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Estado do formulário de nome
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [savingName, setSavingName] = useState(false);
 
-  // Estado do formulário de senha
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -119,11 +177,17 @@ export default function ProfileClient() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+  <div className="flex justify-center items-center min-h-screen">
         <div style={{ color: "var(--accent-primary)" }}>Carregando...</div>
       </div>
     );
   }
+
+  const hasProfile =
+    userProfile &&
+    (userProfile.goal ||
+      userProfile.experienceLevel ||
+      userProfile.trainingDaysPerWeek);
 
   return (
     <div className="flex justify-center min-h-screen py-12">
@@ -150,28 +214,273 @@ export default function ProfileClient() {
         {stats && (
           <div className="grid grid-cols-3 gap-x-4 gap-y-6 mb-10">
             <div className="card-neon text-center" style={{ padding: "24px" }}>
-              <div className="text-3xl font-bold mb-2 text-glow" style={{ color: "var(--accent-primary)" }}>
+              <div
+                className="text-3xl font-bold mb-2 text-glow"
+                style={{ color: "var(--accent-primary)" }}
+              >
                 {stats.totalWorkouts}
               </div>
-              <div className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <div
+                className="text-xs uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 Treinos
               </div>
             </div>
             <div className="card-neon text-center" style={{ padding: "24px" }}>
-              <div className="text-3xl font-bold mb-2 text-glow" style={{ color: "var(--accent-secondary)" }}>
+              <div
+                className="text-3xl font-bold mb-2 text-glow"
+                style={{ color: "var(--accent-secondary)" }}
+              >
                 {stats.totalMetrics}
               </div>
-              <div className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <div
+                className="text-xs uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 Métricas
               </div>
             </div>
             <div className="card-neon text-center" style={{ padding: "24px" }}>
-              <div className="text-3xl font-bold mb-2 text-glow" style={{ color: "var(--accent-success)" }}>
+              <div
+                className="text-3xl font-bold mb-2 text-glow"
+                style={{ color: "var(--accent-success)" }}
+              >
                 {stats.totalPRs}
               </div>
-              <div className="text-xs uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <div
+                className="text-xs uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 PRs
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Card: Perfil de Treino (NOVO) ── */}
+        {hasProfile && (
+          <div className="card-neon mb-6" style={{ padding: "40px" }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <h2
+                className="text-xl font-bold"
+                style={{ color: "var(--accent-primary)" }}
+              >
+                Perfil de Treino
+              </h2>
+              {userProfile.onboardingCompleted && (
+                <span
+                  className="text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider"
+                  style={{
+                    background: "rgba(0, 255, 136, 0.1)",
+                    color: "var(--accent-success)",
+                    border: "1px solid rgba(0, 255, 136, 0.3)",
+                  }}
+                >
+                  Onboarding completo
+                </span>
+              )}
+            </div>
+
+            {/* Grid de informações */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {userProfile.goal && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Objetivo
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {GOAL_LABELS[userProfile.goal] ?? userProfile.goal}
+                  </p>
+                </div>
+              )}
+
+              {userProfile.experienceLevel && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Nível
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {LEVEL_LABELS[userProfile.experienceLevel] ??
+                      userProfile.experienceLevel}
+                  </p>
+                </div>
+              )}
+
+              {userProfile.trainingDaysPerWeek && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Dias por semana
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {userProfile.trainingDaysPerWeek}x por semana
+                  </p>
+                </div>
+              )}
+
+              {userProfile.preferredSplit && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Divisão
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {SPLIT_LABELS[userProfile.preferredSplit] ??
+                      userProfile.preferredSplit}
+                  </p>
+                </div>
+              )}
+
+              {userProfile.weightKg && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Peso
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {userProfile.weightKg} kg
+                  </p>
+                </div>
+              )}
+
+              {userProfile.heightCm && (
+                <div>
+                  <p
+                    className="text-xs uppercase tracking-wider mb-1"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    Altura
+                  </p>
+                  <p
+                    className="text-base font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {userProfile.heightCm} cm
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Meta de séries semanais */}
+            {userProfile.weeklySetGoal && (
+              <div
+                className="mb-6 p-4 rounded-lg"
+                style={{
+                  background: "rgba(0, 217, 255, 0.06)",
+                  border: "1px solid rgba(0, 217, 255, 0.15)",
+                }}
+              >
+                <p
+                  className="text-xs uppercase tracking-wider mb-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Meta semanal de séries
+                </p>
+                <p
+                  className="text-2xl font-bold text-glow"
+                  style={{ color: "var(--accent-primary)" }}
+                >
+                  {userProfile.weeklySetGoal} séries
+                </p>
+              </div>
+            )}
+
+            {/* Programa ativo */}
+            {activeProgramName && (
+              <div
+                className="mb-6 p-4 rounded-lg"
+                style={{
+                  background: "rgba(0, 255, 136, 0.06)",
+                  border: "1px solid rgba(0, 255, 136, 0.15)",
+                }}
+              >
+                <p
+                  className="text-xs uppercase tracking-wider mb-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Programa ativo
+                </p>
+                <p
+                  className="text-base font-semibold"
+                  style={{ color: "var(--accent-success)" }}
+                >
+                  {activeProgramName}
+                </p>
+              </div>
+            )}
+
+            {/* Limitações */}
+            {userProfile.limitations && userProfile.limitations.length > 0 && (
+              <div className="mb-6">
+                <p
+                  className="text-xs uppercase tracking-wider mb-3"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  Limitações físicas
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {userProfile.limitations.map((lim) => (
+                    <span
+                      key={lim}
+                      className="text-xs px-3 py-1 rounded-full font-medium"
+                      style={{
+                        background: "rgba(255, 170, 0, 0.1)",
+                        color: "var(--accent-warning)",
+                        border: "1px solid rgba(255, 170, 0, 0.3)",
+                      }}
+                    >
+                      {LIMITATION_LABELS[lim] ?? lim}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Footer: link para editar */}
+            <div
+              className="pt-5 mt-2 border-t flex items-center justify-between"
+              style={{ borderColor: "rgba(0, 217, 255, 0.15)" }}
+            >
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Quer ajustar alguma informação?
+              </p>
+              <Link
+                href="/profile/settings"
+                className="text-sm font-semibold hover:underline"
+                style={{ color: "var(--accent-secondary)" }}
+              >
+                Editar configurações →
+              </Link>
             </div>
           </div>
         )}
@@ -216,9 +525,15 @@ export default function ProfileClient() {
           <div className="space-y-6">
 
             {/* Nome */}
-            <div className="pb-6 border-b" style={{ borderColor: "rgba(0, 217, 255, 0.2)" }}>
+            <div
+              className="pb-6 border-b"
+              style={{ borderColor: "rgba(0, 217, 255, 0.2)" }}
+            >
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                <label
+                  className="text-sm uppercase tracking-wider"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   Nome
                 </label>
                 {!editingName && (
@@ -259,39 +574,59 @@ export default function ProfileClient() {
                   </button>
                 </div>
               ) : (
-                <p className="text-lg font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
+                <p
+                  className="text-lg font-semibold mt-1"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   {user?.name || "—"}
                 </p>
               )}
             </div>
 
             {/* Email */}
-            <div className="pb-6 border-b" style={{ borderColor: "rgba(0, 217, 255, 0.2)" }}>
-              <label className="text-sm uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            <div
+              className="pb-6 border-b"
+              style={{ borderColor: "rgba(0, 217, 255, 0.2)" }}
+            >
+              <label
+                className="text-sm uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 Email
               </label>
-              <p className="text-lg font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
+              <p
+                className="text-lg font-semibold mt-1"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {user?.email}
               </p>
             </div>
 
             {/* Membro desde */}
             <div>
-              <label className="text-sm uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+              <label
+                className="text-sm uppercase tracking-wider"
+                style={{ color: "var(--text-muted)" }}
+              >
                 Membro desde
               </label>
-              <p className="text-lg font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
+              <p
+                className="text-lg font-semibold mt-1"
+                style={{ color: "var(--text-primary)" }}
+              >
                 {user?.createdAt ? formatDate(user.createdAt) : "—"}
               </p>
             </div>
-
           </div>
         </div>
 
         {/* Card de senha */}
         <div className="card-neon mb-6" style={{ padding: "40px" }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold" style={{ color: "var(--accent-primary)" }}>
+            <h2
+              className="text-xl font-bold"
+              style={{ color: "var(--accent-primary)" }}
+            >
               Segurança
             </h2>
             {!showPasswordForm && (
@@ -307,7 +642,10 @@ export default function ProfileClient() {
           {showPasswordForm ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "var(--accent-primary)" }}>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--accent-primary)" }}
+                >
                   Senha atual
                 </label>
                 <input
@@ -319,7 +657,10 @@ export default function ProfileClient() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "var(--accent-primary)" }}>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--accent-primary)" }}
+                >
                   Nova senha
                 </label>
                 <input
@@ -331,7 +672,10 @@ export default function ProfileClient() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "var(--accent-primary)" }}>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--accent-primary)" }}
+                >
                   Confirmar nova senha
                 </label>
                 <input
@@ -372,7 +716,10 @@ export default function ProfileClient() {
 
         {/* Card de logout */}
         <div className="card-neon" style={{ padding: "40px" }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: "var(--accent-primary)" }}>
+          <h2
+            className="text-xl font-bold mb-4"
+            style={{ color: "var(--accent-primary)" }}
+          >
             Sessão
           </h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
