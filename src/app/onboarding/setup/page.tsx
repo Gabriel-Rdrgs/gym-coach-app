@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { workoutPrograms, workoutTemplates } from "@/data/templates";
 
-// Dias da semana
 const DAYS_OF_WEEK = [
   "Domingo",
   "Segunda-feira",
@@ -35,33 +34,44 @@ export default function OnboardingSetupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1) Busca o programa sugerido do perfil do usuário
   useEffect(() => {
     async function loadProfile() {
       try {
         const res = await fetch("/api/onboarding/status");
         const data = await res.json();
 
+        console.log("[setup] profile data:", data);
+
         if (!data.profile?.suggestedProgram) {
-          // Se não tiver sugestão, vai para o dashboard direto
           router.push("/");
           return;
         }
 
-        const programKey = data.profile
-          .suggestedProgram as keyof typeof workoutPrograms;
-        const program = workoutPrograms[programKey];
-
+        const programKey = data.profile.suggestedProgram as string;
         setSuggestedProgram(programKey);
 
-        // Pega os templates disponíveis para esse programa
-        if (program?.templates) {
-          setAvailableTemplates(program.templates);
+        console.log("[setup] programKey:", programKey);
+        console.log("[setup] workoutPrograms keys:", Object.keys(workoutPrograms));
+
+        // Busca os templates do programa sugerido de forma segura
+        const allProgramKeys = Object.keys(workoutPrograms) as Array<keyof typeof workoutPrograms>;
+        const matchedKey = allProgramKeys.find(
+          (k) => k.toLowerCase().trim() === programKey.toLowerCase().trim()
+        );
+
+        console.log("[setup] matchedKey:", matchedKey);
+
+        if (matchedKey) {
+          const templates = workoutPrograms[matchedKey].templates as unknown as string[];
+          console.log("[setup] templates found:", templates);
+          setAvailableTemplates(templates);
         } else {
           // Fallback: todos os templates disponíveis
+          console.warn("[setup] program key not matched, using all templates");
           setAvailableTemplates(Object.keys(workoutTemplates));
         }
-      } catch {
+      } catch (err) {
+        console.error("[setup] error loading profile:", err);
         setError("Erro ao carregar o programa sugerido.");
       } finally {
         setIsLoading(false);
@@ -71,7 +81,6 @@ export default function OnboardingSetupPage() {
     loadProfile();
   }, [router]);
 
-  // Selecionar / remover template
   const handleToggleTemplate = (template: string) => {
     if (selectedTemplates.includes(template)) {
       setSelectedTemplates(selectedTemplates.filter((t) => t !== template));
@@ -83,21 +92,18 @@ export default function OnboardingSetupPage() {
     }
   };
 
-  // Marcar / desmarcar um treino num dia
   const handleToggleDay = (template: string, dayOfWeek: number) => {
     const exists = scheduledWorkouts.find(
       (sw) => sw.template === template && sw.dayOfWeek === dayOfWeek
     );
 
     if (exists) {
-      // Remove
       setScheduledWorkouts(
         scheduledWorkouts.filter(
           (sw) => !(sw.template === template && sw.dayOfWeek === dayOfWeek)
         )
       );
     } else {
-      // Adiciona
       const order = scheduledWorkouts.filter(
         (sw) => sw.dayOfWeek === dayOfWeek
       ).length;
@@ -114,7 +120,6 @@ export default function OnboardingSetupPage() {
       (sw) => sw.template === template && sw.dayOfWeek === dayOfWeek
     );
 
-  // Salvar o programa via POST /api/programs
   const handleSave = async () => {
     if (selectedTemplates.length === 0) {
       setError("Selecione pelo menos um treino antes de continuar.");
@@ -135,7 +140,7 @@ export default function OnboardingSetupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: `Meu ${suggestedProgram}`,
-          description: `Programa criado automaticamente pelo GymCoach com base no seu perfil.`,
+          description: `Programa criado pelo GymCoach com base no seu perfil.`,
           startDate: new Date().toISOString().split("T")[0],
           scheduledWorkouts,
         }),
@@ -146,7 +151,6 @@ export default function OnboardingSetupPage() {
         throw new Error(data.error ?? "Erro ao criar programa.");
       }
 
-      // Tudo certo: vai para o dashboard
       router.push("/");
     } catch (err: unknown) {
       const message =
@@ -156,8 +160,6 @@ export default function OnboardingSetupPage() {
       setIsSaving(false);
     }
   };
-
-  // ── Renders ──────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -213,39 +215,45 @@ export default function OnboardingSetupPage() {
             Treinos disponíveis
           </h2>
           <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-            Selecione os treinos que farão parte do seu programa. Você pode
-            usar todos ou só alguns.
+            Selecione os treinos que farão parte do seu programa.
           </p>
 
-          <div className="flex flex-wrap gap-3">
-            {availableTemplates.map((template) => {
-              const selected = selectedTemplates.includes(template);
-              return (
-                <button
-                  key={template}
-                  type="button"
-                  onClick={() => handleToggleTemplate(template)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
-                  style={{
-                    background: selected
-                      ? "rgba(167,139,250,0.25)"
-                      : "rgba(10,14,39,0.9)",
-                    border: selected
-                      ? "2px solid var(--accent-secondary)"
-                      : "1px solid rgba(0,217,255,0.4)",
-                    color: selected
-                      ? "var(--accent-secondary)"
-                      : "var(--text-muted)",
-                    boxShadow: selected
-                      ? "0 0 16px rgba(167,139,250,0.35)"
-                      : "none",
-                  }}
-                >
-                  {template}
-                </button>
-              );
-            })}
-          </div>
+          {availableTemplates.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--accent-warning)" }}>
+              Nenhum treino encontrado para o programa "{suggestedProgram}".
+              Tente recarregar a página.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {availableTemplates.map((template) => {
+                const selected = selectedTemplates.includes(template);
+                return (
+                  <button
+                    key={template}
+                    type="button"
+                    onClick={() => handleToggleTemplate(template)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105"
+                    style={{
+                      background: selected
+                        ? "rgba(167,139,250,0.25)"
+                        : "rgba(10,14,39,0.9)",
+                      border: selected
+                        ? "2px solid var(--accent-secondary)"
+                        : "1px solid rgba(0,217,255,0.4)",
+                      color: selected
+                        ? "var(--accent-secondary)"
+                        : "var(--text-muted)",
+                      boxShadow: selected
+                        ? "0 0 16px rgba(167,139,250,0.35)"
+                        : "none",
+                    }}
+                  >
+                    {template}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {selectedTemplates.length > 0 && (
             <p
@@ -270,9 +278,7 @@ export default function OnboardingSetupPage() {
               Distribuição semanal
             </h2>
             <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-              Clique nas células para marcar em quais dias cada treino vai
-              acontecer. Você pode colocar mais de um treino no mesmo dia se
-              quiser.
+              Clique nas células para marcar em quais dias cada treino acontece.
             </p>
 
             <div className="overflow-x-auto">
@@ -300,9 +306,7 @@ export default function OnboardingSetupPage() {
                   {selectedTemplates.map((template) => (
                     <tr
                       key={template}
-                      style={{
-                        borderTop: "1px solid rgba(0,217,255,0.15)",
-                      }}
+                      style={{ borderTop: "1px solid rgba(0,217,255,0.15)" }}
                     >
                       <td
                         className="p-3 text-sm font-semibold"
@@ -313,15 +317,10 @@ export default function OnboardingSetupPage() {
                       {DAYS_SHORT.map((_, dayIndex) => {
                         const scheduled = isScheduled(template, dayIndex);
                         return (
-                          <td
-                            key={dayIndex}
-                            className="p-3 text-center"
-                          >
+                          <td key={dayIndex} className="p-3 text-center">
                             <button
                               type="button"
-                              onClick={() =>
-                                handleToggleDay(template, dayIndex)
-                              }
+                              onClick={() => handleToggleDay(template, dayIndex)}
                               title={
                                 scheduled
                                   ? `Remover ${template} de ${DAYS_OF_WEEK[dayIndex]}`
@@ -341,9 +340,7 @@ export default function OnboardingSetupPage() {
                               }}
                             >
                               {scheduled && (
-                                <span className="text-xs text-green-400">
-                                  ✓
-                                </span>
+                                <span className="text-xs text-green-400">✓</span>
                               )}
                             </button>
                           </td>
@@ -355,7 +352,7 @@ export default function OnboardingSetupPage() {
               </table>
             </div>
 
-            {/* Resumo dos dias com treino */}
+            {/* Resumo dos dias */}
             <div className="mt-6 flex flex-wrap gap-2">
               {DAYS_SHORT.map((day, dayIndex) => {
                 const dayWorkouts = scheduledWorkouts.filter(
@@ -381,12 +378,11 @@ export default function OnboardingSetupPage() {
                     }}
                   >
                     <span className="font-semibold">{day}</span>
-                    {dayWorkouts.length > 0 && (
+                    {dayWorkouts.length > 0 ? (
                       <span className="ml-1">
                         — {dayWorkouts.map((sw) => sw.template).join(", ")}
                       </span>
-                    )}
-                    {dayWorkouts.length === 0 && (
+                    ) : (
                       <span className="ml-1">descanso</span>
                     )}
                   </div>
@@ -420,8 +416,8 @@ export default function OnboardingSetupPage() {
           </div>
         )}
 
-        {/* Botões de ação */}
-        <div className="flex gap-4">
+        {/* Botões */}
+        <div className="flex gap-4 pb-12">
           <button
             type="button"
             onClick={handleSave}

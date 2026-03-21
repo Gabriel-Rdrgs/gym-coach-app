@@ -11,11 +11,10 @@ export async function middleware(req: NextRequest) {
 
   const isPublicRoute =
     pathname.startsWith("/login") ||
-    pathname.startsWith("/signup") ||        // <<< NOVO
+    pathname.startsWith("/signup") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico";
-
 
   let token = null;
 
@@ -29,16 +28,13 @@ export async function middleware(req: NextRequest) {
     console.error("[middleware] getToken failed:", e);
   }
 
-  // Rotas públicas: /login, /api/auth, assets
   if (isPublicRoute) {
-    // Se já estiver logado e for /login, manda pra home
     if (token && pathname.startsWith("/login")) {
       return NextResponse.redirect(new URL("/", req.url));
     }
     return NextResponse.next();
   }
 
-  // Rotas privadas: se não tiver token, redireciona para /login
   if (!token) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
@@ -46,12 +42,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Usuário autenticado acessando rota privada
   return NextResponse.next();
 }
 
-// Aplica o middleware em todas as rotas,
-// exceto estáticos e imagens.
 export const config = {
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

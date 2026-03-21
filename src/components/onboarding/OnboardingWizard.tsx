@@ -104,9 +104,11 @@ export default function OnboardingWizard() {
   };
 
   // Chamado na tela de resultado ao clicar "Entrar no app"
-    const handleFinish = () => {
-        router.push("/onboarding/setup");
-    };
+  const handleFinish = () => {
+    router.refresh(); // força o OnboardingGate a re-verificar o banco
+    router.push("/onboarding/setup");
+  };
+
 
 
   const progress = ((currentStep + 1) / TOTAL_STEPS) * 100;

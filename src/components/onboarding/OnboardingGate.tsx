@@ -1,4 +1,3 @@
-// src/components/onboarding/OnboardingGate.tsx
 import { ReactNode } from "react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -11,7 +10,6 @@ export default async function OnboardingGate({
 }) {
   const session = await auth();
 
-  // Rotas públicas / sem sessão: não interferir
   if (!session || !session.user || !session.user.id) {
     return <>{children}</>;
   }
@@ -28,7 +26,6 @@ export default async function OnboardingGate({
     return <>{children}</>;
   }
 
-  // Se não completou, renderiza o wizard por cima
   return (
     <>
       {children}
